@@ -17,5 +17,6 @@ data/
 *.npz
 
 # Local scratch
+work/
 *.tmp
 .DS_Store

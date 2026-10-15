@@ -1,0 +1,244 @@
+#!/usr/bin/env python3
+"""A0 — forced alignment of *known* lyrics to a vocal stem (no ASR).
+
+This is the "forced" family, not the WhisperX/ASR family: the transcript is
+given, the search is constrained to it, so the output can only mis-*time* the
+lyrics — it cannot invent words.
+
+Method: a wav2vec2 CTC acoustic model + `torchaudio.functional.forced_align`
+(Viterbi over the known target), which is the standard dictionary-free way to
+do this. Requires: torch, torchaudio, transformers.
+
+Usage
+-----
+    # inspect what the model can represent (no audio needed):
+    python scripts/a0_align.py --check --model <hf-id>
+
+    # align:
+    python scripts/a0_align.py \
+        --audio separated/htdemucs/<name>/vocals.wav \
+        --text  caption.txt \
+        --out   results/<name>.words.json \
+        --vtt   results/<name>.vtt
+
+`--text` may be a caption file (the lyric block is extracted) or a plain
+lyrics/words file.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import sys
+from pathlib import Path
+
+DEFAULT_MODEL = "jonatasgrosman/wav2vec2-large-xlsr-53-arabic"
+# Arabic harakat + tatweel — combining marks a speech-trained vocab usually lacks.
+DIACRITICS = re.compile(
+    "[\u064b-\u065f\u0670\u06d6-\u06dc\u06df-\u06e8\u06ea-\u06ed\u0640]"
+)
+
+
+def strip_diacritics(s: str) -> str:
+    return DIACRITICS.sub("", s)
+
+
+# --- text ------------------------------------------------------------------
+
+def load_words(path: Path) -> list[str]:
+    """Words to align, in sung order. Caption files are narrowed to lyrics."""
+    text = path.read_text(encoding="utf-8")
+    if "[Lyrics]" in text:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from a0_lyrics import lyric_lines, words as split_words  # noqa: E402
+        return split_words(lyric_lines(text))
+    out: list[str] = []
+    for ln in text.splitlines():
+        out.extend(ln.split())
+    return [w for w in out if w]
+
+
+# --- model -----------------------------------------------------------------
+
+def load_model(model_id: str, device: str):
+    import torch
+    from transformers import AutoModelForCTC, AutoProcessor
+
+    proc = AutoProcessor.from_pretrained(model_id)
+    model = AutoModelForCTC.from_pretrained(model_id).to(device).eval()
+    return proc, model, torch
+
+
+def vocab_info(proc) -> dict:
+    tok = proc.tokenizer
+    vocab = tok.get_vocab()
+    chars = {k: v for k, v in vocab.items() if len(k) == 1}
+    blank = getattr(tok, "pad_token_id", None)
+    if blank is None:
+        blank = vocab.get("<pad>")
+    sep = "|" if "|" in vocab else (" " if " " in vocab else None)
+    has_diacritics = sum(1 for ch in DIACRITICS.pattern if ch in vocab)
+    return {
+        "vocab_size": len(vocab),
+        "blank_id": blank,
+        "word_separator": sep,
+        "single_char_tokens": len(chars),
+        "diacritic_chars_in_vocab": has_diacritics,
+    }
+
+
+# --- alignment -------------------------------------------------------------
+
+def _keep_in_vocab(word: str, vocab: dict, strip_diac: bool) -> str:
+    if strip_diac:
+        word = strip_diacritics(word)
+    return "".join(ch for ch in word if ch in vocab)
+
+
+def align(audio_path: Path, words: list[str], model_id: str, device: str,
+          strip_diac: bool | None) -> dict:
+    import numpy as np
+    import soundfile as sf
+    import torch
+    import torchaudio
+
+    proc, model, _ = load_model(model_id, device)
+    tok = proc.tokenizer
+    vocab = tok.get_vocab()
+    info = vocab_info(proc)
+    sep = info["word_separator"]
+    if sep is None:
+        sys.exit(f"model vocab has no word separator ('|' or ' '): {model_id}")
+    if strip_diac is None:
+        strip_diac = info["diacritic_chars_in_vocab"] == 0
+
+    kept = [_keep_in_vocab(w, vocab, strip_diac) for w in words]
+    pairs = [(orig, k) for orig, k in zip(words, kept) if k]
+    if not pairs:
+        sys.exit("no words survive the model vocab — wrong model for this text?")
+    target_text = sep.join(k for _, k in pairs)
+
+    # audio -> 16 kHz mono
+    wav, sr = sf.read(str(audio_path), always_2d=True)
+    wav = wav.mean(axis=1).astype("float32")
+    if sr != 16000:
+        wav = torchaudio.functional.resample(torch.from_numpy(wav), sr, 16000).numpy()
+    waveform = torch.from_numpy(wav)
+
+    inputs = proc(waveform, sampling_rate=16000, return_tensors="pt")
+    with torch.no_grad():
+        logits = model(inputs.input_values.to(device)).logits
+    log_probs = torch.log_softmax(logits, dim=-1).cpu()
+
+    target = torch.tensor([tok(t).input_ids for t in [target_text]][0], dtype=torch.int64)
+    if len(target) == 0:
+        sys.exit("empty target after tokenization")
+
+    aligned, scores = torchaudio.functional.forced_align(
+        log_probs, target.unsqueeze(0), blank=info["blank_id"]
+    )
+    spans = torchaudio.functional.merge_tokens(aligned[0], scores[0])
+
+    ratio = waveform.shape[0] / log_probs.shape[1]
+    def t(frame: int) -> float:
+        return frame * ratio / 16000.0
+
+    # walk spans; a separator span (or a gap) ends the current word
+    sep_id = tok.convert_tokens_to_ids(sep)
+    out_words: list[dict] = []
+    wi = 0
+    cur_start = None
+    cur_end = None
+
+    def flush():
+        nonlocal wi, cur_start, cur_end
+        if wi < len(pairs) and cur_start is not None:
+            orig = pairs[wi][0]
+            out_words.append(
+                {"i": wi, "word": orig, "start": round(cur_start, 3),
+                 "end": round(cur_end, 3)}
+            )
+            wi += 1
+        cur_start = cur_end = None
+
+    for sp in spans:
+        if sp.token == sep_id:
+            flush()
+            continue
+        if wi >= len(pairs):
+            break
+        if cur_start is None:
+            cur_start = t(sp.start)
+        cur_end = t(sp.end)
+    flush()
+
+    return {
+        "audio": str(audio_path),
+        "model": model_id,
+        "device": device,
+        "vocab": info,
+        "stripped_diacritics": bool(strip_diac),
+        "n_words_in": len(words),
+        "n_words_aligned": len(out_words),
+        "duration_s": round(waveform.shape[0] / 16000.0, 2),
+        "words": out_words,
+    }
+
+
+def to_vtt(rows: list[dict], path: Path) -> None:
+    def ts(s: float) -> str:
+        h, rem = divmod(s, 3600)
+        m, sec = divmod(rem, 60)
+        return f"{int(h):02d}:{int(m):02d}:{sec:06.3f}"
+    with path.open("w", encoding="utf-8") as fh:
+        fh.write("WEBVTT\n\n")
+        for r in rows:
+            fh.write(f"{ts(r['start'])} --> {ts(r['end'])}\n{r['word']}\n\n")
+
+
+def main(argv: list[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("--audio", help="vocal stem (wav/flac)")
+    ap.add_argument("--text", help="caption file or lyrics/words file")
+    ap.add_argument("--out", help="word-timings JSON (default: stdout)")
+    ap.add_argument("--vtt", help="also write a WebVTT file")
+    ap.add_argument("--model", default=DEFAULT_MODEL)
+    ap.add_argument("--device", default="cpu")
+    ap.add_argument("--strip-diacritics", action=argparse.BooleanOptionalAction,
+                    default=None, help="default: strip iff the model lacks harakat")
+    ap.add_argument("--check", action="store_true",
+                    help="load the model and print vocab info; no audio needed")
+    args = ap.parse_args(argv)
+
+    if args.check:
+        proc, _model, _ = load_model(args.model, args.device)
+        print(json.dumps({"model": args.model, **vocab_info(proc)},
+                         ensure_ascii=False, indent=2))
+        return 0
+
+    if not (args.audio and args.text):
+        ap.error("--audio and --text are required (or use --check)")
+
+    words = load_words(Path(args.text))
+    print(f"[a0] {len(words)} words from {args.text}", file=sys.stderr)
+    result = align(Path(args.audio), words, args.model, args.device,
+                   args.strip_diacritics)
+    print(f"[a0] aligned {result['n_words_aligned']}/{result['n_words_in']} words "
+          f"over {result['duration_s']}s", file=sys.stderr)
+
+    payload = json.dumps(result, ensure_ascii=False, indent=2) + "\n"
+    if args.out:
+        Path(args.out).parent.mkdir(parents=True, exist_ok=True)
+        Path(args.out).write_text(payload, encoding="utf-8")
+        print(f"[a0] wrote {args.out}", file=sys.stderr)
+    else:
+        sys.stdout.write(payload)
+    if args.vtt:
+        Path(args.vtt).parent.mkdir(parents=True, exist_ok=True)
+        to_vtt(result["words"], Path(args.vtt))
+        print(f"[a0] wrote {args.vtt}", file=sys.stderr)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

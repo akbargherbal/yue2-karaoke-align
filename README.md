@@ -47,8 +47,12 @@ README.md                 this file — verdict + orientation
 PLAN.md                   the phased plan: gates, hardware, artifacts, kill criteria
 docs/FEASIBILITY.md       the deep assessment (doable vs headache), with evidence
 docs/ROUTE-A.md           post-hoc forced alignment: why it failed once, and the trial that decides it
+docs/A0-RUNBOOK.md        Track A0 protocol: the one-track forced-alignment trial
 docs/PARENT-CONTEXT.md    how this relates to the sibling project; scope boundary
-scripts/tokenizer_check.py  Phase 0, runnable on CPU
+scripts/tokenizer_check.py   Phase 0, runnable on CPU
+scripts/a0_lyrics.py         extract sung lyrics from a caption file
+scripts/a0_separate.sh       isolate the vocal stem (Demucs, CPU)
+scripts/a0_align.py          forced alignment of known lyrics (wav2vec2 CTC)
 ```
 
 ## Status

@@ -1,8 +1,8 @@
 # PLAN.md — phased plan
 
-Goal: produce **word/phrase-level timestamps for the known lyrics** of a YuE2
-song, good enough to drive a browser highlight player, **without** modifying the
-sibling project.
+Goal: produce **word-level timestamps** for the known lyrics of a YuE2 song
+(line/phrase-level is an acceptable fallback), good enough to drive a browser
+highlight player, **without** modifying the sibling project.
 
 Non-goals: changing training, datasets, `INFERENCE/run_one.sh`, `generate.py`,
 GCS, or the production inference path. Nothing here is wired into production
@@ -186,6 +186,7 @@ Track B. Detail, risks and dual value: [docs/ROUTE-A.md](docs/ROUTE-A.md).
 
 A0 **can run on CPU** (separation + alignment, slower) — so it does not contend
 with a training run, unlike every GPU phase of Track B.
+Protocol and exact commands: [docs/A0-RUNBOOK.md](docs/A0-RUNBOOK.md).
 
 ## Risk register
 
