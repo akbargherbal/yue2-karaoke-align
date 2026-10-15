@@ -1,0 +1,7 @@
+# Duel: the two self-hosted survivor mirrors, head to head.
+# Both are byte-identical copies of our B2 survivors:
+#   -quran-v_final  <- rabah2026/...-arabic-quran-v_final  (the pick)
+#    (base)         <- jonatasgrosman/...-arabic            (the fallback)
+# Revisions are pinned in bench/models.lock.
+akbargherbal/wav2vec2-large-xlsr-53-arabic-quran-v_final
+akbargherbal/wav2vec2-large-xlsr-53-arabic
