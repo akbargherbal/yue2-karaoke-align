@@ -109,3 +109,4 @@ Separating track /content/yue2-karaoke-align/data/yue2_songs/B_consonants_04-ا�
 [bench]   A_diction_mix_03-مشهد-الذئاب_2019749659: 131/131 mono=True cov=1.0 on/off=2.21 242.8s
 [bench]   A_diction_mix_04-القطا-ومضجع-العراء_3770232818: 113/113 mono=True cov=1.0 on/off=3.0 287.0s
 [bench]   A_diction_mix_05-الطريد-وهموم-ملازمة-العزة-والزهد_552458420: 120/120 mono=True cov=1.0 on/off=2.57 186.7s
+[bench]   A_diction_mix_06-ليلة-الرعب_1743552974: 137/137 mono=True cov=1.0 on/off=1.47 229.0s
