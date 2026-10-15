@@ -127,6 +127,12 @@ Notes:
   `--limit-models`.
 - Partial results survive: `bench_raw.jsonl` is appended per run, and the
   reports are rebuilt from it at the end.
+- **Pinned revisions:** `bench/models.lock` maps each id to a commit SHA and the
+  harness loads that SHA, so a run is reproducible even if a repo's `main` moves.
+- **Self-hosted mirrors:** the two starred entries in `bench/models.txt` are
+  byte-identical mirrors under our own namespace (`akbargherbal/*`), so the sweep
+  does not depend on `jonatasgrosman`/`rabah2026` staying online. To mirror a new
+  model: `hf repos duplicate <owner>/<name>`.
 
 ## 7. Decision rule
 

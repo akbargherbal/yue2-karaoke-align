@@ -59,6 +59,26 @@ def read_models(path: Path) -> list[str]:
     return out
 
 
+def load_lock(path: Path | None, models_file: Path) -> dict[str, str]:
+    """Map model id -> pinned commit SHA from a models.lock JSON.
+
+    Default: a `models.lock` sitting next to the models file. Missing lock is
+    fine (unpinned run); a malformed lock is a hard error so a typo never
+    silently degrades into "load whatever main is today".
+    """
+    if path is None:
+        path = models_file.with_name("models.lock")
+    if not path.is_file():
+        return {}
+    data = json.loads(path.read_text(encoding="utf-8"))
+    out: dict[str, str] = {}
+    for mid, meta in data.get("models", {}).items():
+        rev = meta.get("revision") if isinstance(meta, dict) else meta
+        if rev:
+            out[mid] = rev
+    return out
+
+
 def resolve_songs(path: Path | None, data_dir: Path | None,
                   auto: bool) -> list[dict]:
     if auto:
@@ -128,6 +148,8 @@ def params_m(model) -> float:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--models", required=True, help="file with one model id per line")
+    ap.add_argument("--lock", help="pinned revisions JSON (default: models.lock "
+                                   "beside --models)")
     ap.add_argument("--songs", help="songs JSON")
     ap.add_argument("--data-dir", help="directory holding the audio + captions")
     ap.add_argument("--auto-songs", action="store_true",
@@ -152,6 +174,7 @@ def main(argv: list[str] | None = None) -> int:
     models = read_models(Path(args.models))
     if args.limit_models:
         models = models[:args.limit_models]
+    lock = load_lock(Path(args.lock) if args.lock else None, Path(args.models))
     songs = resolve_songs(Path(args.songs) if args.songs else None, data_dir,
                           args.auto_songs)
     if args.limit_songs:
@@ -181,16 +204,20 @@ def main(argv: list[str] | None = None) -> int:
     jsonl = out / "bench_raw.jsonl"
     with jsonl.open("w", encoding="utf-8") as fh:
         for mi, model_id in enumerate(models, 1):
-            print(f"\n[bench] model {mi}/{len(models)}: {model_id}", flush=True)
+            revision = lock.get(model_id)
+            pin = f"@{revision[:12]}" if revision else ""
+            print(f"\n[bench] model {mi}/{len(models)}: {model_id}{pin}", flush=True)
             try:
                 t_load = time.monotonic()
                 rss0 = _rss_mb()
-                proc, model, torch = load_model(model_id, args.device)
+                proc, model, torch = load_model(model_id, args.device,
+                                                revision=revision)
                 load_s = time.monotonic() - t_load
             except Exception as e:  # noqa: BLE001
                 print(f"[bench]   LOAD FAILED: {type(e).__name__}: {e}", flush=True)
                 for s in songs:
                     rec = {"model": model_id, "song": s["name"], "ok": False,
+                           "revision": revision,
                            "error": f"load: {type(e).__name__}: {e}"}
                     fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
                     rows.append(rec)
@@ -219,6 +246,7 @@ def main(argv: list[str] | None = None) -> int:
                 m, warns = qa(res["words"], res["duration_s"], GAP_THRESHOLD)
                 rec = {
                     "model": model_id, "song": s["name"], "ok": True,
+                    "revision": revision,
                     "params_m": p_m, "load_s": round(load_s, 1),
                     "align_s": round(align_s, 1),
                     "audio_min": round(res["duration_s"] / 60.0, 2),

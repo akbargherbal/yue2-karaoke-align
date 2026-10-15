@@ -81,12 +81,15 @@ def load_words(path: Path) -> list[str]:
 
 # --- model -----------------------------------------------------------------
 
-def load_model(model_id: str, device: str):
+def load_model(model_id: str, device: str, revision: str | None = None):
     import torch
     from transformers import AutoModelForCTC, AutoProcessor
 
-    proc = AutoProcessor.from_pretrained(model_id)
-    model = AutoModelForCTC.from_pretrained(model_id)
+    # Pin the commit when the lockfile supplies one: reproducible and immune to
+    # the repo's `main` moving (or the repo disappearing, if it's a mirror).
+    kw = {"revision": revision} if revision else {}
+    proc = AutoProcessor.from_pretrained(model_id, **kw)
+    model = AutoModelForCTC.from_pretrained(model_id, **kw)
     # facebook/mms-* is a single multilingual head with per-language adapters;
     # without an explicit language it uses a wrong adapter (BENCH-PLAN: "ara").
     if "mms" in model_id.lower():
@@ -243,9 +246,9 @@ def align_waveform(proc, model, waveform, words: list[str], strip_diac: bool | N
 
 
 def align(audio_path: Path, words: list[str], model_id: str, device: str,
-          strip_diac: bool | None) -> dict:
+          strip_diac: bool | None, revision: str | None = None) -> dict:
     """One-shot: load the model, load the audio, align."""
-    proc, model, _ = load_model(model_id, device)
+    proc, model, _ = load_model(model_id, device, revision=revision)
     waveform = load_audio(audio_path)
     return align_waveform(proc, model, waveform, words, strip_diac,
                           model_id, str(audio_path), device)
@@ -269,6 +272,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out", help="word-timings JSON (default: stdout)")
     ap.add_argument("--vtt", help="also write a WebVTT file")
     ap.add_argument("--model", default=DEFAULT_MODEL)
+    ap.add_argument("--revision", default=None,
+                    help="pin a commit SHA (see bench/models.lock)")
     ap.add_argument("--device", default="cpu")
     ap.add_argument("--strip-diacritics", action=argparse.BooleanOptionalAction,
                     default=None, help="default: strip iff the model lacks harakat")
@@ -277,9 +282,9 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
 
     if args.check:
-        proc, _model, _ = load_model(args.model, args.device)
-        print(json.dumps({"model": args.model, **vocab_info(proc)},
-                         ensure_ascii=False, indent=2))
+        proc, _model, _ = load_model(args.model, args.device, revision=args.revision)
+        print(json.dumps({"model": args.model, "revision": args.revision,
+                          **vocab_info(proc)}, ensure_ascii=False, indent=2))
         return 0
 
     if not (args.audio and args.text):
@@ -288,7 +293,7 @@ def main(argv: list[str] | None = None) -> int:
     words = load_words(Path(args.text))
     print(f"[a0] {len(words)} words from {args.text}", file=sys.stderr)
     result = align(Path(args.audio), words, args.model, args.device,
-                   args.strip_diacritics)
+                   args.strip_diacritics, revision=args.revision)
     print(f"[a0] aligned {result['n_words_aligned']}/{result['n_words_in']} words "
           f"over {result['duration_s']}s", file=sys.stderr)
 

@@ -1,14 +1,19 @@
 # Acoustic models to benchmark for word-level forced alignment.
 # One HuggingFace repo id per line. '#' starts a comment.
 #
+# Revisions are pinned in bench/models.lock; scripts/bench.py loads each id at
+# its pinned commit SHA so a run is reproducible even if `main` moves. The two
+# starred entries are byte-identical self-hosted mirrors (akbargherbal/*) of the
+# upstream models, so the benchmark does not depend on the original namespaces.
+#
 # Only CTC models can be used with torchaudio.functional.forced_align.
 # Non-CTC trending models (Whisper, Parakeet/TDT, Voxtral, Qwen3-ASR,
 # zipformer/k2) need a different mechanism — see docs/BENCH-PLAN.md.
 #
 # --- core set: CTC, drops straight into scripts/bench.py -------------------
-jonatasgrosman/wav2vec2-large-xlsr-53-arabic      # baseline; Arabic script, full harakat in vocab
+akbargherbal/wav2vec2-large-xlsr-53-arabic         # * mirror of jonatasgrosman/...: baseline; Arabic script, full harakat
 elgeish/wav2vec2-large-xlsr-53-arabic             # 2nd opinion; Buckwalter input, lower reported WER
-rabah2026/wav2vec2-large-xlsr-53-arabic-quran-v_final  # Quran-trained: recitation ~ singing (madd, sustained vowels)
+akbargherbal/wav2vec2-large-xlsr-53-arabic-quran-v_final  # * mirror of rabah2026/...-quran-v_final: Quran-trained (recitation ~ singing)
 MostafaMaroof/wav2vec2-arabic-phoneme-asr         # phoneme-level vocabulary (alignment-native)
 facebook/mms-1b-all                               # multilingual CTC; load with target_lang="ara"
 IbrahimAmin/egyptian-arabic-wav2vec2-xlsr-53      # dialectal control (expect weaker on fusha)

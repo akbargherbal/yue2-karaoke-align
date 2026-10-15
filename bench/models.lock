@@ -1,0 +1,32 @@
+{
+  "_comment": "Pinned revisions for bench/models.txt. The 'revision' is the commit SHA to load, so a run is reproducible even if a repo's main branch moves or the repo is deleted (use a mirror). Generated 2026-10-15.",
+  "generated": "2026-10-15",
+  "models": {
+    "akbargherbal/wav2vec2-large-xlsr-53-arabic": {
+      "revision": "4ca1c9c6ac85d839eebc530ec85b6a89f697e4e8",
+      "source": "jonatasgrosman/wav2vec2-large-xlsr-53-arabic",
+      "source_revision": "af46c2d8531b8dcbb5e23b952f739b372c2e5d2d",
+      "weights_sha256": "a0b26f6d9d3edfde1784aef863c192a8cc1e438a23b45910ab648531ebe1857b",
+      "note": "byte-identical archival mirror"
+    },
+    "akbargherbal/wav2vec2-large-xlsr-53-arabic-quran-v_final": {
+      "revision": "9207b12074d622446fe19afd29228d6cbcbb6fa1",
+      "source": "rabah2026/wav2vec2-large-xlsr-53-arabic-quran-v_final",
+      "source_revision": "b03a268c6ba1a693752307325ab376c86c3b12da",
+      "weights_sha256": "bf65674a26eb4ef7042cedade96c3c8f8cbd04f3a7d1a68eadceec8ed0f99ecb",
+      "note": "byte-identical archival mirror"
+    },
+    "elgeish/wav2vec2-large-xlsr-53-arabic": {
+      "revision": "b5e6df14064b879671fd242c0366cbe2a68effc9"
+    },
+    "MostafaMaroof/wav2vec2-arabic-phoneme-asr": {
+      "revision": "0a32c641aaaeec6957e41a794add52e024e46b50"
+    },
+    "facebook/mms-1b-all": {
+      "revision": "3d33597edbdaaba14a8e858e2c8caa76e3cec0cd"
+    },
+    "IbrahimAmin/egyptian-arabic-wav2vec2-xlsr-53": {
+      "revision": "c2ce8d4d8d548a21c6ea88d5506cb3cf4508a654"
+    }
+  }
+}
