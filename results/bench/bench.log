@@ -49,3 +49,10 @@ Separating track /content/yue2-karaoke-align/data/yue2_songs/B_consonants_04-ا�
 [bench]   A_diction_mix_03-مشهد-الذئاب_2019749659: 131/131 mono=True cov=1.0 on/off=2.02 99.0s
 [bench]   A_diction_mix_04-القطا-ومضجع-العراء_3770232818: 113/113 mono=True cov=0.973 on/off=2.8 116.1s
 [bench]   A_diction_mix_05-الطريد-وهموم-ملازمة-العزة-والزهد_552458420: 120/120 mono=True cov=0.976 on/off=2.81 91.6s
+[bench]   A_diction_mix_06-ليلة-الرعب_1743552974: 137/137 mono=True cov=0.959 on/off=1.52 94.1s
+[bench]   B_consonants_03-مشهد-الذئاب_2867769501: 131/131 mono=True cov=0.978 on/off=1.74 100.5s
+[bench]   B_consonants_04-القطا-ومضجع-العراء_1437953371: 113/113 mono=True cov=0.981 on/off=3.64 114.5s
+
+[bench] model 2/6: elgeish/wav2vec2-large-xlsr-53-arabic
+Loading weights:   0%|          | 0/424 [00:00<?, ?it/s]Loading weights: 100%|██████████| 424/424 [00:00<00:00, 8586.63it/s]
+[a0] model vocab needs buckwalter transliteration (155/155 words matched)
