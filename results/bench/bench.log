@@ -56,3 +56,11 @@ Separating track /content/yue2-karaoke-align/data/yue2_songs/B_consonants_04-ا�
 [bench] model 2/6: elgeish/wav2vec2-large-xlsr-53-arabic
 Loading weights:   0%|          | 0/424 [00:00<?, ?it/s]Loading weights: 100%|██████████| 424/424 [00:00<00:00, 8586.63it/s]
 [a0] model vocab needs buckwalter transliteration (155/155 words matched)
+[bench]   A_diction_mix_01-الوداع-والالتحاق-بالرفاق-الحقيقيين_462805571: 155/155 mono=True cov=0.956 on/off=1.55 141.4s
+[a0] model vocab needs buckwalter transliteration (161/161 words matched)
+[bench]   A_diction_mix_02-تنزه-عما-ليس-فيه-الجلد-في-الظلام-والجوع_1053902951: 161/161 mono=True cov=0.946 on/off=1.96 124.1s
+[a0] model vocab needs buckwalter transliteration (131/131 words matched)
+[bench]   A_diction_mix_03-مشهد-الذئاب_2019749659: 131/131 mono=True cov=0.918 on/off=1.54 119.4s
+[a0] model vocab needs buckwalter transliteration (113/113 words matched)
+[bench]   A_diction_mix_04-القطا-ومضجع-العراء_3770232818: 113/113 mono=True cov=0.959 on/off=2.84 130.1s
+[a0] model vocab needs buckwalter transliteration (120/120 words matched)
