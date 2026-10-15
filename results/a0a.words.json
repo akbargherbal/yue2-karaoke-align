@@ -10,6 +10,7 @@
     "diacritic_chars_in_vocab": 6
   },
   "stripped_diacritics": false,
+  "transliteration": "none",
   "n_words_in": 120,
   "n_words_aligned": 120,
   "duration_s": 192.65,

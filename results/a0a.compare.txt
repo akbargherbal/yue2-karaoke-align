@@ -1,0 +1,23 @@
+jonatasgrosman: jonatasgrosman/wav2vec2-large-xlsr-53-arabic  translit=none  n=120
+elgeish: elgeish/wav2vec2-large-xlsr-53-arabic  translit=buckwalter  n=120
+
+-- sanity (a0_qa) --
+  jonatasgrosman: monotone=True overlaps=0 coverage=1.0 med_dur=0.76 warnings=1
+  elgeish: monotone=True overlaps=0 coverage=0.97 med_dur=0.68 warnings=1
+
+-- agreement (same word index) --
+  |dstart|: median 0.02s  mean 0.17s  p90 0.40s  max 2.60s
+  |dend|  : median 0.08s  max 5.80s
+  within 0.3s: 87%
+  within 0.5s: 94%
+  within 1.0s: 95%
+  worst disagreements:
+    [ 86] الْغِنَى             A= 140.29 B= 137.69 (d=2.60s)
+    [ 85] يَنَالُ              A= 139.51 B= 137.13 (d=2.38s)
+    [110] وَلَا                A= 173.77 B= 171.49 (d=2.28s)
+    [ 54] تَثُوبُ              A=  99.02 B=  96.82 (d=2.20s)
+    [ 87] ذُو                  A= 141.23 B= 140.05 (d=1.18s)
+
+-- energy tracking vs vocal stem --
+  jonatasgrosman: {"on_word_env": 0.1045, "off_word_env": 0.0485, "on_off_ratio": 2.16, "first_word_start": 21.48, "inter_line_gap_env_median": 0.0529}
+  elgeish: {"on_word_env": 0.1038, "off_word_env": 0.0545, "on_off_ratio": 1.9, "first_word_start": 21.46, "inter_line_gap_env_median": 0.0472}

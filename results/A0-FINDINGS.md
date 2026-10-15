@@ -77,6 +77,49 @@ audio+text pairs would work too.
 **If this ever ships**, these become runtime dependencies (bundle or fetch on
 first use), and the Apache-2.0 attribution should travel with them.
 
+## Model comparison (A/B on the same track)
+
+Two independently-trained Arabic wav2vec2 checkpoints, same audio, same lyrics,
+same pipeline — only `--model` changed. Full output:
+`results/a0a.compare.txt`.
+
+| | jonatasgrosman | elgeish |
+|---|---|---|
+| Params / size / license | 315M / 1.2 GB / Apache-2.0 | 315M / 1.2 GB / Apache-2.0 |
+| Input format | **Arabic script** (full harakat in vocab) | **Buckwalter transliteration** required |
+| Words aligned | 120/120 | 120/120 |
+| Monotone / overlaps | yes / 0 | yes / 0 |
+| Coverage | 1.00 | 0.97 |
+| Median word | 0.76 s | 0.68 s |
+| Energy on/off ratio | 2.16× | 1.90× |
+| First word | 21.48 s | 21.46 s |
+
+**Agreement between the two models** (the sharpest evidence without ground truth —
+two independent models agreeing means the audio really constrains it):
+
+| |dstart| | value |
+|---|---|
+| median | **0.02 s** (≈ one 20 ms frame) |
+| mean | 0.17 s |
+| p90 | 0.40 s |
+| within 0.3 s / 0.5 s / 1.0 s | 87% / 94% / 95% |
+
+The worst disagreements cluster on four words (indices 54, 85–87, 110; up to
+2.6 s), consistent with melisma or repeated phrasing.
+
+**Two conclusions:**
+
+1. **They are equivalent for our task.** And the reported *ASR* WER difference
+   (39.6 vs 26.6) **did not translate into an alignment difference** — a concrete
+   confirmation that WER is the wrong yardstick here. Pick on integration cost:
+   `jonatasgrosman` takes Arabic script directly; `elgeish` needs a
+   transliteration step, so it is the more fragile dependency.
+2. **Agreement to ~one frame** is the strongest signal so far that the timings
+   are real rather than plausible-looking.
+
+Both players are committed for ear comparison:
+`results/a0a.player.html` (jonatasgrosman) and `results/a0a.elgeish.player.html`.
+
 ## Caveats (do not over-read this)
 
 1. **Suno proxy.** Same lyrics/genre, but cleanly produced. A0a is a *generous*

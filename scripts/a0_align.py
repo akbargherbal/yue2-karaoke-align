@@ -43,6 +43,27 @@ def strip_diacritics(s: str) -> str:
     return DIACRITICS.sub("", s)
 
 
+# Some Arabic ASR checkpoints (e.g. elgeish/*) are trained on Buckwalter
+# *transliteration*, not Arabic script, so their vocab has no Arabic letters and
+# raw lyrics match nothing. Map to Buckwalter when the script's own chars fail.
+BUCKWALTER = {
+    "\u0621": "'", "\u0622": "|", "\u0623": ">", "\u0624": "&", "\u0625": "<",
+    "\u0626": "}", "\u0627": "A", "\u0628": "b", "\u0629": "p", "\u062a": "t",
+    "\u062b": "v", "\u062c": "j", "\u062d": "H", "\u062e": "x", "\u062f": "d",
+    "\u0630": "*", "\u0631": "r", "\u0632": "z", "\u0633": "s", "\u0634": "$",
+    "\u0635": "S", "\u0636": "D", "\u0637": "T", "\u0638": "Z", "\u0639": "E",
+    "\u063a": "g", "\u0640": "_", "\u0641": "f", "\u0642": "q", "\u0643": "k",
+    "\u0644": "l", "\u0645": "m", "\u0646": "n", "\u0647": "h", "\u0648": "w",
+    "\u0649": "Y", "\u064a": "y", "\u064b": "F", "\u064c": "N", "\u064d": "K",
+    "\u064e": "a", "\u064f": "u", "\u0650": "i", "\u0651": "~", "\u0652": "o",
+    "\u0670": "`", "\u0671": "{",
+}
+
+
+def to_buckwalter(s: str) -> str:
+    return "".join(BUCKWALTER.get(ch, ch) for ch in s)
+
+
 # --- text ------------------------------------------------------------------
 
 def load_words(path: Path) -> list[str]:
@@ -89,9 +110,11 @@ def vocab_info(proc) -> dict:
 
 # --- alignment -------------------------------------------------------------
 
-def _keep_in_vocab(word: str, vocab: dict, strip_diac: bool) -> str:
+def _keep_in_vocab(word: str, vocab: dict, strip_diac: bool, transform=None) -> str:
     if strip_diac:
         word = strip_diacritics(word)
+    if transform is not None:
+        word = transform(word)
     return "".join(ch for ch in word if ch in vocab)
 
 
@@ -116,10 +139,21 @@ def align(audio_path: Path, words: list[str], model_id: str, device: str,
     if strip_diac is None:
         strip_diac = info["diacritic_chars_in_vocab"] == 0
 
-    kept = [_keep_in_vocab(w, vocab, strip_diac) for w in words]
-    pairs = [(orig, k) for orig, k in zip(words, kept) if k]
+    def attempt(transform) -> list[tuple[str, str]]:
+        kept = [_keep_in_vocab(w, vocab, strip_diac, transform) for w in words]
+        return [(o, k) for o, k in zip(words, kept) if k]
+
+    pairs = attempt(None)
+    translit = "none"
+    if len(pairs) < max(1, len(words) // 2):
+        alt = attempt(to_buckwalter)
+        if len(alt) > len(pairs):
+            pairs, translit = alt, "buckwalter"
     if not pairs:
         sys.exit("no words survive the model vocab — wrong model for this text?")
+    if translit != "none":
+        print(f"[a0] model vocab needs {translit} transliteration "
+              f"({len(pairs)}/{len(words)} words matched)", file=sys.stderr)
     target_text = sep.join(k for _, k in pairs)
 
     # audio -> 16 kHz mono
@@ -186,6 +220,7 @@ def align(audio_path: Path, words: list[str], model_id: str, device: str,
         "device": device,
         "vocab": info,
         "stripped_diacritics": bool(strip_diac),
+        "transliteration": translit,
         "n_words_in": len(words),
         "n_words_aligned": len(out_words),
         "duration_s": round(waveform.shape[0] / 16000.0, 2),
