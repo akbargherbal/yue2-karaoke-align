@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# Data / model artifacts (never commit audio, weights, or tokenizer files)
+data/
+*.wav
+*.flac
+*.mp3
+*.safetensors
+*.gguf
+*.tiktoken
+*.npy
+*.npz
+
+# Local scratch
+*.tmp
+.DS_Store
