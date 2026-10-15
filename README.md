@@ -10,10 +10,14 @@ honest assessment, and one runnable CPU check. No model code yet, on purpose.
 
 ## Verdict (short)
 
-- **The effect is achievable today, cheaply, via post-hoc forced alignment** —
-  isolate the vocal stem, then force-align the *known* lyrics. ~1 day of work,
-  near-certain result. **Out of scope here by decision**; recorded in
-  [PLAN.md](PLAN.md) as the known-good fallback only.
+- **Post-hoc alignment is plausible, but it is NOT the easy win it looks like.**
+  Speech-ASR aligners (WhisperX, stable-ts) hallucinate and loop on *sung*
+  audio — that is their expected failure mode, not bad luck. True **forced**
+  alignment with a fixed transcript (MFA, Charsiu, aeneas) belongs to a
+  different family: it cannot invent content, only mis-time it. Still gated by
+  vocal-separation quality and the lack of a singing-trained Arabic acoustic
+  model. Reopened as **Track A**, gated by a one-track trial.
+  See [docs/ROUTE-A.md](docs/ROUTE-A.md).
 - **The native route** (read the alignment out of the generation itself) is
   **doable as a demo, a headache as a production feature**: ~3–5 days to a
   base-model demo, ~1–2 weeks with real uncertainty to make it faithful to our
@@ -42,6 +46,7 @@ Standalone. This repo **consumes** the sibling's rendered audio + prompt lyrics
 README.md                 this file — verdict + orientation
 PLAN.md                   the phased plan: gates, hardware, artifacts, kill criteria
 docs/FEASIBILITY.md       the deep assessment (doable vs headache), with evidence
+docs/ROUTE-A.md           post-hoc forced alignment: why it failed once, and the trial that decides it
 docs/PARENT-CONTEXT.md    how this relates to the sibling project; scope boundary
 scripts/tokenizer_check.py  Phase 0, runnable on CPU
 ```

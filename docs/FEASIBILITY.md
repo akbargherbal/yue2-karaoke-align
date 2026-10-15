@@ -51,9 +51,20 @@ Two useful consequences:
 
 ## 4. The two routes, and why B is the expensive one
 
-**Route A — post-hoc forced alignment.** Separate vocals, align known lyrics.
-Bypasses the model entirely; robust because the text is known. ~1 day,
-near-certain. **Out of scope by decision** — kept only as the fallback.
+**Route A — post-hoc forced alignment.** Separate vocals, then align the *known*
+lyrics. Bypasses the model entirely. **Correction (2026-10-15):** an earlier
+draft called this "~1 day, near-certain". That was wrong, and the field
+experience of this project is the evidence: **ASR-based** aligners (WhisperX,
+stable-ts) hallucinate and loop on sung audio — a documented failure mode of
+recognising music. Voice separation is not sufficient to save them.
+
+The real question is the *family*: **forced alignment with a fixed transcript**
+(MFA, Charsiu, aeneas) constrains the search to the given text, so it cannot
+invent content — only mis-time it. That is a materially different, more
+survivable failure mode, but it is unproven here and still gated by (a) vocal
+separation quality on a dense mix, (b) the absence of a singing-trained Arabic
+acoustic model, (c) melisma/madd stretching one syllable across many frames.
+See [ROUTE-A.md](ROUTE-A.md). Cost: ~2–4 days, gated by a one-track trial.
 
 **Route B — native extraction.** Requires running the model with instrumentation.
 The costs stack in this order:
@@ -73,7 +84,7 @@ The costs stack in this order:
 
 | Question | Answer |
 |---|---|
-| Is the UX achievable today? | **Yes** — via Route A, ~1 day. |
+| Is the UX achievable today? | **Unclear** — Route A failed once (ASR family, hallucination); the forced-alignment family is untested. Trial A0 decides it. |
 | Is it achievable natively? | **Yes, as a demo** — base-model render, ~3–5 days. |
 | Faithful to our LoRA tracks? | **Headache** — ~1–2 weeks, real C++/CUDA risk. |
 | Is the player hard? | **No** — ~½ day, and independent of the above. |

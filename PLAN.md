@@ -12,22 +12,23 @@ unless Phase 6 is explicitly opened.
 
 | | A — post-hoc forced alignment | B — native extraction (this spike) |
 |---|---|---|
-| Idea | Separate the vocal stem, force-align the known lyrics to it (MFA / stable-ts / WhisperX) | Tap the AR stream during generation; the lyric→frame attention *is* the alignment |
-| Cost | ~1 day | ~3–5 days (demo) … ~1–2 weeks (production-faithful) |
-| Certainty | Near-certain | Unproven; one hard gate (monotonicity) and one parity gate |
-| Fidelity to our tracks | Exact (runs on our WAVs) | Depends on runtime parity (Phase 3) |
-| Extra deps | Demucs-like separator + aligner | The YuE2 Python reference + hooks, or a C++ patch |
-| Status | **Out of scope by decision** — the documented fallback | The thing being investigated |
+| Idea | Separate the vocal stem, then **force-align the known lyrics**. Use a *forced* aligner (MFA / Charsiu / aeneas), **not** an ASR aligner (WhisperX) — see [docs/ROUTE-A.md](docs/ROUTE-A.md) | Tap the AR stream during generation; the lyric→frame attention *is* the alignment |
+| Cost | ~2–4 days, **quality-gated** | ~3–5 days (demo) … ~1–2 weeks (production-faithful) |
+| Certainty | **Uncertain** — field experience (WhisperX hallucinating on sung audio) says this is not a drop-in | Unproven; one hard gate (monotonicity) and one parity gate |
+| Fidelity to our tracks | Exact (runs on our WAVs) — *if* the vocal stem separates cleanly | Depends on runtime parity (Phase 3) |
+| Extra deps | Vocal separator (Demucs/MDX) + a forced aligner + a G2P lexicon for diacritized Arabic | The YuE2 Python reference + hooks, or a C++ patch |
+| Status | **Reopened as Track A**, gated by a one-track trial (A0) | The thing being investigated |
 
-The honest headline: **the UX you want is cheap through A and expensive through
-B.** B is pursued because it is native, not because it is easier — and because
-the Phase 2 readout also answers a separate question (where the model's
-pronunciation knowledge is applied). Phase 0–2 is therefore worth running even
-if the feature is later shelved.
+The honest headline: **neither route is cheap.** A *looked* cheap and isn't —
+the ASR family already failed here, and the forced-alignment family is
+untested. B is native but pays for it in instrumentation and runtime parity.
+Phase 0–2 remains the cheapest high-information slice, and its Phase 2 readout
+also answers a separate question (where the pronunciation knowledge is applied).
 
 ## Hardware
 
-- **CPU:** Phase 0, Phase 4, Phase 5 (and the probe training in 2b).
+- **CPU:** Phase 0, Phase 4, Phase 5 (and the probe training in 2b), plus **Track
+  A0** (separation + forced alignment can run on CPU, slowly).
 - **GPU:** Phase 1, 2, 3. This is unavoidable — the readout *is* a forward pass
   over the model.
 - **Rule (inherited):** one shared/rented GPU. Before any GPU work run
@@ -164,20 +165,35 @@ and must not alter `run_one.sh` / `generate.py`.
 
 | Path | Effort | Certainty |
 |---|---|---|
-| A — post-hoc | ~1 day | high (out of scope by decision) |
+| A — forced alignment (Track A) | ~2–4 days, gated by A0 | **uncertain** — see [docs/ROUTE-A.md](docs/ROUTE-A.md) |
 | B — native, base-model demo | ~3–5 days | medium |
 | B — native, our-LoRA faithful | ~1–2 weeks | low (C++/CUDA risk) |
 | Player only | ~½ day | high |
 
-**Verdict:** doable as a demo; a headache as a feature. The P0–P2 slice is the
-cheap, high-information part (and has dual value: it also reveals *where* the
-pronunciation knowledge is applied). Phases 3+ are where it becomes a project.
+**Verdict:** doable as a demo; a headache as a feature. **Track A0 is the single
+cheapest decisive test** and needs no GPU. The P0–P2 slice is the cheap,
+high-information part of Track B (and has dual value: it also reveals *where*
+the pronunciation knowledge is applied). Phases 3+ are where it becomes a
+project.
+
+## Track A — post-hoc alignment (reopened)
+
+Gated by **A0**: one existing rendered WAV → separate vocals → a *forced*
+aligner (MFA / Charsiu / aeneas — **not** WhisperX) with the known diacritized
+lyrics → inspect. If line/phrase boundaries land convincingly, Route A is
+viable; if the anchors are mush, it is dead for this corpus and effort pivots to
+Track B. Detail, risks and dual value: [docs/ROUTE-A.md](docs/ROUTE-A.md).
+
+A0 **can run on CPU** (separation + alignment, slower) — so it does not contend
+with a training run, unlike every GPU phase of Track B.
 
 ## Risk register
 
 | Risk | Where | Mitigation |
 |---|---|---|
 | Harakat not preserved by the tokenizer | P0 | Gate; reframes the question, doesn't block the plan |
+| Vocal separation too poor to align | A0 | Gate; if the stem is mush, Route A is dead — pivot to Track B |
+| No singing-trained Arabic acoustic model | A0–A2 | Accept coarse timing; A2 = train a domain model from our own audio+text pairs |
 | Reference won't load our converted LoRA | P1/P3 | Deferred; base-model scope, or C++ patch |
 | Attention is diffuse, not monotone | P2 | Kill gate → probe (2b) or stop |
 | C++/CUDA patch + arch build cost | P3 | Scope decision; only if faithful timings are required |
