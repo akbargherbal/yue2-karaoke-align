@@ -77,3 +77,7 @@ Separating track /content/yue2-karaoke-align/data/yue2_songs/B_consonants_04-ا�
 [bench]   A_diction_mix_01-الوداع-والالتحاق-بالرفاق-الحقيقيين_462805571: 155/155 mono=True cov=0.954 on/off=1.72 146.3s
 [bench]   A_diction_mix_02-تنزه-عما-ليس-فيه-الجلد-في-الظلام-والجوع_1053902951: 161/161 mono=True cov=0.946 on/off=2.31 109.9s
 [bench]   A_diction_mix_03-مشهد-الذئاب_2019749659: 131/131 mono=True cov=0.918 on/off=2.27 96.9s
+[bench]   A_diction_mix_04-القطا-ومضجع-العراء_3770232818: 113/113 mono=True cov=0.973 on/off=3.19 115.2s
+[bench]   A_diction_mix_05-الطريد-وهموم-ملازمة-العزة-والزهد_552458420: 120/120 mono=True cov=0.976 on/off=2.77 86.5s
+[bench]   A_diction_mix_06-ليلة-الرعب_1743552974: 137/137 mono=True cov=0.974 on/off=1.51 90.8s
+[bench]   B_consonants_03-مشهد-الذئاب_2867769501: 131/131 mono=True cov=0.978 on/off=1.86 95.0s
