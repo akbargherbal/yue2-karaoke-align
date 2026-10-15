@@ -81,3 +81,14 @@ Separating track /content/yue2-karaoke-align/data/yue2_songs/B_consonants_04-ا�
 [bench]   A_diction_mix_05-الطريد-وهموم-ملازمة-العزة-والزهد_552458420: 120/120 mono=True cov=0.976 on/off=2.77 86.5s
 [bench]   A_diction_mix_06-ليلة-الرعب_1743552974: 137/137 mono=True cov=0.974 on/off=1.51 90.8s
 [bench]   B_consonants_03-مشهد-الذئاب_2867769501: 131/131 mono=True cov=0.978 on/off=1.86 95.0s
+[bench]   B_consonants_04-القطا-ومضجع-العراء_1437953371: 113/113 mono=True cov=0.981 on/off=3.47 110.2s
+
+[bench] model 4/6: MostafaMaroof/wav2vec2-arabic-phoneme-asr
+Loading weights:   0%|          | 0/424 [00:00<?, ?it/s]Loading weights:  58%|█████▊    | 248/424 [00:00<00:00, 2357.58it/s]Loading weights: 100%|██████████| 424/424 [00:00<00:00, 2513.04it/s]
+[a0] model vocab needs buckwalter transliteration (155/155 words matched)
+[bench]   A_diction_mix_01-الوداع-والالتحاق-بالرفاق-الحقيقيين_462805571: 155/155 mono=True cov=0.956 on/off=0.53 129.6s
+[a0] model vocab needs buckwalter transliteration (161/161 words matched)
+[bench]   A_diction_mix_02-تنزه-عما-ليس-فيه-الجلد-في-الظلام-والجوع_1053902951: 161/161 mono=True cov=0.951 on/off=0.37 106.3s
+[a0] model vocab needs buckwalter transliteration (131/131 words matched)
+[bench]   A_diction_mix_03-مشهد-الذئاب_2019749659: 131/131 mono=True cov=0.935 on/off=0.36 111.4s
+[a0] model vocab needs buckwalter transliteration (113/113 words matched)
