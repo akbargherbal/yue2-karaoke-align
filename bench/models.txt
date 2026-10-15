@@ -6,12 +6,18 @@
 # starred entries are byte-identical self-hosted mirrors (akbargherbal/*) of the
 # upstream models, so the benchmark does not depend on the original namespaces.
 #
+# PRODUCTION DEFAULT (results/BENCH-FINDINGS.md, Addendum 2026-10-15):
+#   akbargherbal/wav2vec2-large-xlsr-53-arabic   (the base mirror, marked below)
+# It tied the Quran fine-tune on timing (identical within one CTC frame) and won
+# on simplicity/provenance — no measured accuracy edge for the fine-tune. The
+# rest of this file is the sweep set, not the shippable default.
+#
 # Only CTC models can be used with torchaudio.functional.forced_align.
 # Non-CTC trending models (Whisper, Parakeet/TDT, Voxtral, Qwen3-ASR,
 # zipformer/k2) need a different mechanism — see docs/BENCH-PLAN.md.
 #
 # --- core set: CTC, drops straight into scripts/bench.py -------------------
-akbargherbal/wav2vec2-large-xlsr-53-arabic         # * mirror of jonatasgrosman/...: baseline; Arabic script, full harakat
+akbargherbal/wav2vec2-large-xlsr-53-arabic         # <- PRODUCTION DEFAULT; * mirror of jonatasgrosman/...: baseline; Arabic script, full harakat
 elgeish/wav2vec2-large-xlsr-53-arabic             # 2nd opinion; Buckwalter input, lower reported WER
 akbargherbal/wav2vec2-large-xlsr-53-arabic-quran-v_final  # * mirror of rabah2026/...-quran-v_final: Quran-trained (recitation ~ singing)
 MostafaMaroof/wav2vec2-arabic-phoneme-asr         # phoneme-level vocabulary (alignment-native)

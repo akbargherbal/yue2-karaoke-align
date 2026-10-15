@@ -178,3 +178,40 @@ slightly better energy tracking, at equal or lower cost.
 - CPU peak-mem (RSS delta) is unreliable; if VRAM matters, re-run on a GPU box
   with `--device cuda` — the quality ranking should not change.
 - `B4` (gold anchors / one non-CTC family) was out of scope for this run.
+
+## Addendum (2026-10-15) — final decision: the **base** mirror
+
+The verdict above picked `rabah2026-...-quran-v_final` on a **cost tie-break**.
+A follow-up 2-song duel of the two self-hosted mirrors (`results/duel/`, run on
+CPU) shows that tie-break is **noise**, so the pick is superseded.
+
+Duel table (2 songs, `--limit-songs 2`):
+
+| model | words | cover | on/off | intro-viol | s/audio-min | mem |
+|---|---|---|---|---|---|---|
+| `akbargherbal/...-arabic-quran-v_final` | 155/155, 161/161 | 0.950 | 2.02 | 0/2 | 32.5 | 1756 MB |
+| `akbargherbal/...-arabic` (base) | 155/155, 161/161 | 0.950 | 2.21 | 0/2 | 30.1 | 1264 MB |
+
+Word 0 landed **0.020 s apart on both songs — exactly one CTC frame** → explicit
+TIE. And every tie-break axis **flipped** between this run and the 8-song sweep:
+
+| axis | 8-song | 2-song duel |
+|---|---|---|
+| on/off | quran 2.39 > 2.37 | base 2.21 > 2.02 |
+| s/audio-min | quran 27.6 < 28.2 | base 30.1 < 32.5 |
+| peak mem | quran 1341 < 1816 | base 1264 < 1756 |
+
+> A tie-break that reverses every run is not a tie-break. Accuracy is a genuine
+> tie (both pass the silent-intro test; timings identical within a frame).
+
+**Decision:** use **`akbargherbal/wav2vec2-large-xlsr-53-arabic`** (the base
+mirror, pinned `4ca1c9c6ac85d839eebc530ec85b6a89f697e4e8`) as the production
+aligner; keep the Quran mirror as a spare. The base is the ancestor checkpoint,
+the more standard/better-exercised of the two, and the Quran fine-tune showed no
+measurable benefit on our task.
+
+Note: the two are the **same lineage** (rabah = a fine-tune of jonatasgrosman),
+so "consensus" between them is self-agreement, and the whole bench's domain
+labels were poor predictors — `egyptian` (dialectal) collapsed, `phoneme-asr`
+failed energy tracking, `quran` matched its base, and only the plain baseline
+scored. Only **gold anchors** (hand-checked word starts) can overturn this.
