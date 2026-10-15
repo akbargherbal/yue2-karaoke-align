@@ -130,9 +130,12 @@ def align(audio_path: Path, words: list[str], model_id: str, device: str,
         logits = model(inputs.input_values.to(device)).logits
     log_probs = torch.log_softmax(logits, dim=-1).cpu()
 
-    target = torch.tensor([tok(t).input_ids for t in [target_text]][0], dtype=torch.int64)
-    if len(target) == 0:
+    enc = tok(target_text)
+    specials = set(getattr(tok, "all_special_ids", []) or [])
+    ids = [i for i in enc.input_ids if i not in specials]
+    if not ids:
         sys.exit("empty target after tokenization")
+    target = torch.tensor(ids, dtype=torch.int64)
 
     aligned, scores = torchaudio.functional.forced_align(
         log_probs, target.unsqueeze(0), blank=info["blank_id"]
