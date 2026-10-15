@@ -70,8 +70,12 @@ def resolve_songs(path: Path | None, data_dir: Path | None,
             if not audio.is_file():
                 audio = txt.with_suffix(".wav")
             if audio.is_file():
-                songs.append({"name": txt.stem, "audio": audio.name,
-                              "caption": txt.name})
+                # Resolve against --data-dir, not CWD: the non-auto branch below
+                # does the same, and downstream code (Demucs, load_words) opens
+                # these paths as given.
+                songs.append({"name": txt.stem,
+                              "audio": str(audio.resolve()),
+                              "caption": str(txt.resolve())})
         return songs
     if path is None:
         sys.exit("give --songs or --auto-songs")
@@ -359,7 +363,7 @@ def write_reports(out: Path, rows: list[dict], models: list[str],
         mem = max(r.get(memkey, 0) for r in ok)
         lines.append(
             f"| `{m}` | {len(ok)}/{len(rs)} | "
-            f"{statistics.mean(c):.3f} | "
+            f"{(f'{statistics.mean(c):.3f}' if c else '—')} | "
             f"{(f'{statistics.mean(gd):.3f}' if gd else '—')} | "
             f"{onoff:.2f} | {cov:.2f} | {mono:.0%} | {tl} | {sec:.1f} | "
             f"{ok[0]['params_m']:.0f} | {mem:.0f} MB |")
@@ -387,7 +391,9 @@ def write_reports(out: Path, rows: list[dict], models: list[str],
               "(lower is better)*", ""]
     for i, (m, s) in enumerate(ranked, 1):
         prim = (f"gold MAE {s['gold_mae_s']:.3f}s" if s.get("gold_mae_s") is not None
-                else f"consensus {s['consensus_dev_s']:.3f}s")
+                else (f"consensus {s['consensus_dev_s']:.3f}s"
+                      if s.get("consensus_dev_s") is not None
+                      else "single-model run (no consensus yet)"))
         lines.append(f"{i}. `{m}` — {prim}, on/off {s['on_off']}, cover {s['coverage']}, "
                      f"{s['sec_per_audio_min']}s/min, {s['params_m']:.0f}M params")
     lines += ["", "> Consensus deviation is a *proxy*: it measures agreement between",

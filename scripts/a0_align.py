@@ -86,7 +86,13 @@ def load_model(model_id: str, device: str):
     from transformers import AutoModelForCTC, AutoProcessor
 
     proc = AutoProcessor.from_pretrained(model_id)
-    model = AutoModelForCTC.from_pretrained(model_id).to(device).eval()
+    model = AutoModelForCTC.from_pretrained(model_id)
+    # facebook/mms-* is a single multilingual head with per-language adapters;
+    # without an explicit language it uses a wrong adapter (BENCH-PLAN: "ara").
+    if "mms" in model_id.lower():
+        proc.tokenizer.set_target_lang("ara")
+        model.load_adapter("ara")
+    model = model.to(device).eval()
     return proc, model, torch
 
 
