@@ -73,3 +73,7 @@ Separating track /content/yue2-karaoke-align/data/yue2_songs/B_consonants_04-ا�
 [bench]   B_consonants_04-القطا-ومضجع-العراء_1437953371: 113/113 mono=True cov=0.963 on/off=3.0 131.2s
 
 [bench] model 3/6: rabah2026/wav2vec2-large-xlsr-53-arabic-quran-v_final
+Loading weights:   0%|          | 0/424 [00:00<?, ?it/s]Loading weights:  58%|█████▊    | 245/424 [00:00<00:00, 2398.13it/s]Loading weights: 100%|██████████| 424/424 [00:00<00:00, 2415.17it/s]
+[bench]   A_diction_mix_01-الوداع-والالتحاق-بالرفاق-الحقيقيين_462805571: 155/155 mono=True cov=0.954 on/off=1.72 146.3s
+[bench]   A_diction_mix_02-تنزه-عما-ليس-فيه-الجلد-في-الظلام-والجوع_1053902951: 161/161 mono=True cov=0.946 on/off=2.31 109.9s
+[bench]   A_diction_mix_03-مشهد-الذئاب_2019749659: 131/131 mono=True cov=0.918 on/off=2.27 96.9s
