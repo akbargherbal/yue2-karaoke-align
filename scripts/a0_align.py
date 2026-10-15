@@ -118,14 +118,29 @@ def _keep_in_vocab(word: str, vocab: dict, strip_diac: bool, transform=None) -> 
     return "".join(ch for ch in word if ch in vocab)
 
 
-def align(audio_path: Path, words: list[str], model_id: str, device: str,
-          strip_diac: bool | None) -> dict:
-    import numpy as np
+def load_audio(audio_path) -> "torch.Tensor":
+    """Read any audio file as 16 kHz mono float32."""
     import soundfile as sf
     import torch
     import torchaudio
 
-    proc, model, _ = load_model(model_id, device)
+    wav, sr = sf.read(str(audio_path), always_2d=True)
+    wav = wav.mean(axis=1).astype("float32")
+    if sr != 16000:
+        wav = torchaudio.functional.resample(torch.from_numpy(wav), sr, 16000).numpy()
+    return torch.from_numpy(wav)
+
+
+def align_waveform(proc, model, waveform, words: list[str], strip_diac: bool | None,
+                   model_id: str = "", audio_label: str = "", device: str = "cpu") -> dict:
+    """Align already-loaded 16 kHz mono audio.
+
+    Split out from `align()` so a batch harness can load each acoustic model
+    **once** and reuse it across many songs.
+    """
+    import torch
+    import torchaudio
+
     tok = proc.tokenizer
     vocab = tok.get_vocab()
     info = vocab_info(proc)
@@ -155,13 +170,6 @@ def align(audio_path: Path, words: list[str], model_id: str, device: str,
         print(f"[a0] model vocab needs {translit} transliteration "
               f"({len(pairs)}/{len(words)} words matched)", file=sys.stderr)
     target_text = sep.join(k for _, k in pairs)
-
-    # audio -> 16 kHz mono
-    wav, sr = sf.read(str(audio_path), always_2d=True)
-    wav = wav.mean(axis=1).astype("float32")
-    if sr != 16000:
-        wav = torchaudio.functional.resample(torch.from_numpy(wav), sr, 16000).numpy()
-    waveform = torch.from_numpy(wav)
 
     inputs = proc(waveform, sampling_rate=16000, return_tensors="pt")
     with torch.no_grad():
@@ -215,7 +223,7 @@ def align(audio_path: Path, words: list[str], model_id: str, device: str,
     flush()
 
     return {
-        "audio": str(audio_path),
+        "audio": audio_label,
         "model": model_id,
         "device": device,
         "vocab": info,
@@ -226,6 +234,15 @@ def align(audio_path: Path, words: list[str], model_id: str, device: str,
         "duration_s": round(waveform.shape[0] / 16000.0, 2),
         "words": out_words,
     }
+
+
+def align(audio_path: Path, words: list[str], model_id: str, device: str,
+          strip_diac: bool | None) -> dict:
+    """One-shot: load the model, load the audio, align."""
+    proc, model, _ = load_model(model_id, device)
+    waveform = load_audio(audio_path)
+    return align_waveform(proc, model, waveform, words, strip_diac,
+                          model_id, str(audio_path), device)
 
 
 def to_vtt(rows: list[dict], path: Path) -> None:

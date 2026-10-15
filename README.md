@@ -25,6 +25,10 @@ honest assessment, and one runnable CPU check. No model code yet, on purpose.
 - **The browser player is trivial** (~half a day) and is independent of how the
   timings are produced. It can be built immediately against placeholder timings.
 
+2. If you just want the best model: [docs/BENCH-PLAN.md](docs/BENCH-PLAN.md)
+   — metrics, shortlist (incl. Quran-trained and phoneme-level Arabic models),
+   and the Colab procedure. Licensing is out of scope (personal use).
+
 ## Why this might work at all
 
 YuE2's AR stream is conditioned on the diacritized lyric tokens and emits a
@@ -48,11 +52,19 @@ PLAN.md                   the phased plan: gates, hardware, artifacts, kill crit
 docs/FEASIBILITY.md       the deep assessment (doable vs headache), with evidence
 docs/ROUTE-A.md           post-hoc forced alignment: why it failed once, and the trial that decides it
 docs/A0-RUNBOOK.md        Track A0 protocol: the one-track forced-alignment trial
+docs/BENCH-PLAN.md        model selection: metrics, shortlist, Colab procedure
 docs/PARENT-CONTEXT.md    how this relates to the sibling project; scope boundary
+bench/models.txt          candidate acoustic models (CTC core set + stretch)
+bench/songs.json          the benchmark song set (2 per maqam)
 scripts/tokenizer_check.py   Phase 0, runnable on CPU
 scripts/a0_lyrics.py         extract sung lyrics from a caption file
 scripts/a0_separate.sh       isolate the vocal stem (Demucs, CPU)
 scripts/a0_align.py          forced alignment of known lyrics (wav2vec2 CTC)
+scripts/a0_qa.py             screen timings for aligner failure signatures
+scripts/a0_compare.py        cross-model agreement + energy tracking
+scripts/a0_player.py         self-contained karaoke HTML from word timings
+scripts/bench.py             the benchmark harness (models x songs)
+scripts/colab_setup.sh       one-shot Colab provisioning for the benchmark
 ```
 
 ## Status
