@@ -115,3 +115,7 @@ Separating track /content/yue2-karaoke-align/data/yue2_songs/B_consonants_04-ا�
 
 [bench] model 6/6: IbrahimAmin/egyptian-arabic-wav2vec2-xlsr-53
 Loading weights:   0%|          | 0/423 [00:00<?, ?it/s]Loading weights:  84%|████████▍ | 356/423 [00:00<00:00, 3558.76it/s]Loading weights: 100%|██████████| 423/423 [00:00<00:00, 3517.73it/s]
+[bench]   A_diction_mix_01-الوداع-والالتحاق-بالرفاق-الحقيقيين_462805571: 1/155 mono=True cov=0.954 on/off=7.55 128.3s
+[bench]   A_diction_mix_02-تنزه-عما-ليس-فيه-الجلد-في-الظلام-والجوع_1053902951: 1/161 mono=True cov=0.946 on/off=8.3 103.2s
+[bench]   A_diction_mix_03-مشهد-الذئاب_2019749659: 1/131 mono=True cov=1.0 on/off=3374.47 97.7s
+[bench]   A_diction_mix_04-القطا-ومضجع-العراء_3770232818: 1/113 mono=True cov=0.973 on/off=11.3 114.7s
