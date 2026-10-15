@@ -61,6 +61,22 @@ target" filter **deleted every word boundary** and the whole song collapsed to a
 single word. Fix: never strip the word-delimiter token. (Also: `merge_tokens`
 returns *vocabulary* ids, not target-sequence indices — worth knowing.)
 
+## Dependencies and licensing
+
+| Component | Source | Size | License | Token? |
+|---|---|---|---|---|
+| Aligner ("ears") `jonatasgrosman/wav2vec2-large-xlsr-53-arabic` | HuggingFace | ~1.2 GB | **Apache-2.0** | no (public, not gated) |
+| Separation Demucs 4.1.0 `htdemucs` | pip + weights | ~80 MB | MIT (code) | no |
+| torch / torchaudio / transformers | PyPI | ~1 GB (CPU) | BSD/Apache | no |
+
+Downloaded once, then fully offline (HF cache ~2.5 GB). The dependency is a
+*pretrained Arabic acoustic model*, not HuggingFace-the-service — HF is just the
+easiest source; MFA's own Arabic models or a model trained from our own
+audio+text pairs would work too.
+
+**If this ever ships**, these become runtime dependencies (bundle or fetch on
+first use), and the Apache-2.0 attribution should travel with them.
+
 ## Caveats (do not over-read this)
 
 1. **Suno proxy.** Same lyrics/genre, but cleanly produced. A0a is a *generous*
