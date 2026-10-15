@@ -64,3 +64,12 @@ Separating track /content/yue2-karaoke-align/data/yue2_songs/B_consonants_04-ا�
 [a0] model vocab needs buckwalter transliteration (113/113 words matched)
 [bench]   A_diction_mix_04-القطا-ومضجع-العراء_3770232818: 113/113 mono=True cov=0.959 on/off=2.84 130.1s
 [a0] model vocab needs buckwalter transliteration (120/120 words matched)
+[bench]   A_diction_mix_05-الطريد-وهموم-ملازمة-العزة-والزهد_552458420: 120/120 mono=True cov=0.975 on/off=2.38 86.7s
+[a0] model vocab needs buckwalter transliteration (137/137 words matched)
+[bench]   A_diction_mix_06-ليلة-الرعب_1743552974: 137/137 mono=True cov=0.939 on/off=1.38 101.4s
+[a0] model vocab needs buckwalter transliteration (131/131 words matched)
+[bench]   B_consonants_03-مشهد-الذئاب_2867769501: 131/131 mono=True cov=0.978 on/off=1.65 104.7s
+[a0] model vocab needs buckwalter transliteration (113/113 words matched)
+[bench]   B_consonants_04-القطا-ومضجع-العراء_1437953371: 113/113 mono=True cov=0.963 on/off=3.0 131.2s
+
+[bench] model 3/6: rabah2026/wav2vec2-large-xlsr-53-arabic-quran-v_final
