@@ -18,12 +18,15 @@ Repo: `https://github.com/akbargherbal/yue2-karaoke-align` (this box already has
 it at `/content/yue2-karaoke-align`).
 
 Task: run a **2-song head-to-head** of the two mirrors and return a verdict.
-Keep it minimal — 2 models × 2 songs, nothing else.
+Keep it minimal — 2 models × 2 songs, nothing else. **This runtime is CPU-only**
+(the terminal is `cpu_akbar`), so there is no `nvidia-smi` and no CUDA; run
+everything on CPU.
 
 1. Update the code:
    `cd /content/yue2-karaoke-align && git pull --ff-only`
-2. **Check the GPU before anything:** run `nvidia-smi`. If an ai-toolkit training
-   run is active, **stop and tell me** — do not start the duel.
+2. Confirm the runtime is CPU (expected, not a problem): `python -c "import torch;
+   print(torch.cuda.is_available())"` should print `False`. Do **not** pass any
+   `cuda` flags.
 3. Ensure deps (idempotent): `bash scripts/colab_setup.sh` (skips what is present).
 4. Stage **2 songs**. Prefer the real YuE2 renders already used for the sweep
    (`data/yue2_songs`, files named `A_diction_mix_*.mp3` + `.txt`). Run exactly
@@ -31,10 +34,11 @@ Keep it minimal — 2 models × 2 songs, nothing else.
    ```
    python scripts/bench.py --models bench/models_duel.txt --auto-songs \
        --data-dir data/yue2_songs --out results/duel \
-       --device cuda --sep-device cuda --limit-songs 2
+       --device cpu --sep-device cpu --limit-songs 2
    ```
    (If `data/yue2_songs` is missing, tell me and I will re-stage it — do not
-   substitute a different dataset silently.)
+   substitute a different dataset silently.) Expect ~10–15 min total on CPU:
+   Demucs ~2 min/song (cached after), each aligner ~28 s per audio-minute.
 5. Decide:
    ```
    python scripts/duel_verdict.py --results results/duel/bench_results.json
@@ -59,7 +63,8 @@ Facts already established — do not re-derive:
   Quran mirror.
 - Only a **gold set** (hand-checked word starts — a human listens) can break a
   real tie. That is the next step if I want one; not this run.
-- Run one model at a time; stems are cached; pass `--sep-device cuda`.
+- Run one model at a time; stems are cached; keep everything on CPU
+  (`--device cpu --sep-device cpu`) — this runtime has no GPU.
 
 Do not polish tooling. Fix bugs only, keep the run to 2×2, report.
 
