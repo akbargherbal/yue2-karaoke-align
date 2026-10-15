@@ -45,3 +45,5 @@ Separating track /content/yue2-karaoke-align/data/yue2_songs/B_consonants_04-ا�
 [bench] model 1/6: jonatasgrosman/wav2vec2-large-xlsr-53-arabic
 Loading weights:   0%|          | 0/424 [00:00<?, ?it/s]Loading weights: 100%|██████████| 424/424 [00:00<00:00, 23394.26it/s]
 [bench]   A_diction_mix_01-الوداع-والالتحاق-بالرفاق-الحقيقيين_462805571: 155/155 mono=True cov=0.954 on/off=1.95 141.7s
+[bench]   A_diction_mix_02-تنزه-عما-ليس-فيه-الجلد-في-الظلام-والجوع_1053902951: 161/161 mono=True cov=0.946 on/off=2.48 109.0s
+[bench]   A_diction_mix_03-مشهد-الذئاب_2019749659: 131/131 mono=True cov=1.0 on/off=2.02 99.0s
