@@ -109,6 +109,10 @@ def align(audio_path: Path, words: list[str], model_id: str, device: str,
     sep = info["word_separator"]
     if sep is None:
         sys.exit(f"model vocab has no word separator ('|' or ' '): {model_id}")
+    # The word delimiter is itself a *special* token in these tokenizers, so a
+    # naive "drop all_special_ids" filter deletes every word boundary and the
+    # whole song collapses to one word. Never strip it.
+    sep_id = tok.convert_tokens_to_ids(sep)
     if strip_diac is None:
         strip_diac = info["diacritic_chars_in_vocab"] == 0
 
@@ -131,7 +135,7 @@ def align(audio_path: Path, words: list[str], model_id: str, device: str,
     log_probs = torch.log_softmax(logits, dim=-1).cpu()
 
     enc = tok(target_text)
-    specials = set(getattr(tok, "all_special_ids", []) or [])
+    specials = set(getattr(tok, "all_special_ids", []) or []) - {sep_id}
     ids = [i for i in enc.input_ids if i not in specials]
     if not ids:
         sys.exit("empty target after tokenization")
@@ -146,8 +150,7 @@ def align(audio_path: Path, words: list[str], model_id: str, device: str,
     def t(frame: int) -> float:
         return frame * ratio / 16000.0
 
-    # walk spans; a separator span (or a gap) ends the current word
-    sep_id = tok.convert_tokens_to_ids(sep)
+    # walk spans; a separator span ends the current word
     out_words: list[dict] = []
     wi = 0
     cur_start = None
@@ -165,6 +168,8 @@ def align(audio_path: Path, words: list[str], model_id: str, device: str,
         cur_start = cur_end = None
 
     for sp in spans:
+        if sp.token == info["blank_id"]:
+            continue
         if sp.token == sep_id:
             flush()
             continue

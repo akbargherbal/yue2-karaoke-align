@@ -188,6 +188,11 @@ A0 **can run on CPU** (separation + alignment, slower) — so it does not conten
 with a training run, unlike every GPU phase of Track B.
 Protocol and exact commands: [docs/A0-RUNBOOK.md](docs/A0-RUNBOOK.md).
 
+**A0a result (2026-10-15): PASS on the objective screen** — 120/120 words,
+monotone, coverage 1.0, and no words placed in the silent 21 s intro of the
+vocal stem. Full numbers + caveats: [results/A0-FINDINGS.md](results/A0-FINDINGS.md).
+**A0b (a real YuE2 render) is the remaining gate** — A0a used a Suno proxy.
+
 ## Risk register
 
 | Risk | Where | Mitigation |
