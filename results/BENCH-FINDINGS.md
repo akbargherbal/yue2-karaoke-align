@@ -24,6 +24,23 @@ Raw data: `bench_raw.jsonl`, `bench_results.json`, full log `bench.log`.
 > (A "precise diction" vs B "crisp consonants") of the *same* poem, not a second
 > poem. Ajam/Kurd use two distinct poems.
 
+## Figures
+
+Decision dashboard and per-issue plots live in `bench/plots/`; rebuild them
+from the saved results with `.venv/bin/python scripts/bench_plots.py`.
+
+![Decision dashboard](bench/plots/00_dashboard.png)
+
+- `01_pareto.png` — quality vs cost (bubble = params); rabah and
+  jonatasgrosman share the best-quality / lowest-cost corner.
+- `02_silent_intro.png` — the decisive test: word 0 vs measured lead silence.
+- `03_energy.png` — on/off energy tracking (log); phoneme falls below 1.
+- `04_trap_metric.png` — MMS's best-in-class coverage beside its 8/8 intro
+  violations.
+- `05_lineage.png` — rabah-quran vs its own base; ≤0.04 s apart every song, so
+  their "consensus" is self-agreement.
+- `06_song_difficulty.png` — disagreement by song (Nahawand dominates).
+
 ## Model table (all 6 loaded; no load failures)
 
 | model | ok/total | consensus dev (s) | on/off | coverage | mono | translit | sec/audio-min | params (M) | peak mem |

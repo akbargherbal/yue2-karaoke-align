@@ -1,0 +1,7 @@
+# Extra dependencies for scripts/bench_plots.py (the benchmark harness itself
+# needs only torch/torchaudio/transformers/demucs).
+#
+#   .venv/bin/python -m pip install -r scripts/requirements-plots.txt
+matplotlib>=3.8
+seaborn>=0.13
+pandas>=2.0
