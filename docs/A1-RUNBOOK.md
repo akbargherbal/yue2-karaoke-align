@@ -174,6 +174,21 @@ the A0a proxy:
 
 Artifacts: `results/a1/suno-smoke/`.
 
+### Flat — a single song + caption-style lyrics
+
+A local flat pair (`<name>.mp3` + `<name>.txt`, where the `.txt` was a full
+caption with `[Intro]` / `[Verse]` tags) was run in flat mode:
+
+| | |
+|---|---|
+| Words | 125/125, 24 line cues |
+| Coverage / on-off / intro | 0.981 / 2.52 / ok |
+| Long gaps | 14 over 2 s (max 17.1 s); low-energy instrumentals (RMS 0.016–0.041 vs 0.133 on words) |
+
+This is the same shape that fails if invoked with `--run-dir`; the tool now
+prints the flat-mode hint before loading the model. The source audio was outside
+this repo, so its artifacts are local rather than committed.
+
 ### Real — a 4-song YuE2 run directory
 
 Run `20261021-045926_ibn_zuraiq_21102026_backing_formatted`, fetched read-only

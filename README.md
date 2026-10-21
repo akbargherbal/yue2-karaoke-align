@@ -32,6 +32,41 @@ If you just want the best model: [docs/BENCH-PLAN.md](docs/BENCH-PLAN.md)
 — metrics, shortlist (incl. Quran-trained and phoneme-level Arabic models),
 and the Colab procedure. Licensing is out of scope (personal use).
 
+## Quick start
+
+Environment: a Python venv with `torch`, `torchaudio`, `transformers`, `demucs`
+and `soundfile`; see [docs/A0-RUNBOOK.md](docs/A0-RUNBOOK.md#prerequisites-once).
+No GPU is required.
+
+The pipeline accepts two input shapes — pick the one that matches what you have:
+
+```bash
+# 1. Flat pair: <name>.mp3/.wav + <name>.txt (same basename)
+.venv/bin/python scripts/a1_align_run.py --data-dir path/to/song --auto-songs
+
+# 2. YuE2 run directory: <name>_<seed>.wav + prompts/<name>_lyrics.txt
+.venv/bin/python scripts/a1_align_run.py --run-dir path/to/out/<run>
+
+# Always cheap to check first: lists the pairing, no model load, no writes
+.venv/bin/python scripts/a1_align_run.py --data-dir path/to/song --auto-songs --dry-run
+```
+
+For mismatched names, FLAC, or an explicit per-song list, use `--songs`
+(see the [input contract](docs/A1-RUNBOOK.md#input-the-minimum-shape)).
+
+Each run writes `results/a1/<label>/`:
+
+| file | contents |
+|---|---|
+| `<song>.words.json` | **word-level** timings + QA + lyric-line indices (source of truth) |
+| `<song>.vtt` / `<song>.srt` | **line-level** subtitles, one cue per lyric line |
+| `<song>.player.html` | self-contained karaoke page driven by the word timings |
+| `summary.json`, `A1-REPORT.md`, `index.html` | machine summary, QA table, links |
+
+Word-level timing is in the JSON and the player; `.srt`/`.vtt` are line-level
+(what a normal subtitle player can display). The player links its audio by
+relative path, so it travels with the source file.
+
 ## Why this might work at all
 
 YuE2's AR stream is conditioned on the diacritized lyric tokens and emits a
@@ -86,8 +121,11 @@ one CTC frame and is kept as a spare.
 writes word JSON, line-level VTT/SRT, a karaoke player, a QA report and an
 index page. See [docs/A1-RUNBOOK.md](docs/A1-RUNBOOK.md). It has been run on a
 **real 4-song YuE2 run directory**: 4/4 songs, 570 words, 0 silent-intro
-violations (`results/a1/yue2-real/`). A Suno smoke run reproduced A0a's first
-word at **21.481 s** (A0a: 21.48 s).
+violations (`results/a1/yue2-real/`). A single-song **flat two-file** run
+(`song.mp3` + `song.txt`) also passed at 125/125 words and 24 line cues, with
+the silent-intro check ok. A Suno smoke run reproduced A0a's first word at
+**21.481 s** (A0a: 21.48 s). Run-dir outputs are keyed by the WAV stem, so
+multiple seeds of one lyric do not collide.
 
 **Not done:** the base/Quran model choice is still a cost tie rather than a
 gold-anchor accuracy decision, and **Track B (native extraction) has not
