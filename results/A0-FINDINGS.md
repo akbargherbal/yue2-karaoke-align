@@ -140,8 +140,11 @@ Both players are committed for ear comparison:
   the silent-intro test and agreed to ~0.02 s. See
   [BENCH-FINDINGS.md](BENCH-FINDINGS.md). A0a's positive result did transfer.
 - **A1 — done (2026-10-21).** `scripts/a1_align_run.py` batches a run directory
-  into word JSON + line-level VTT/SRT + player + QA report. A smoke run on this
-  same track reproduced word 0 at **21.481 s** (A0a: 21.48 s), 120/120 words.
-  See [docs/A1-RUNBOOK.md](../docs/A1-RUNBOOK.md) and `results/a1/suno-smoke/`.
-- **Still open:** A1 on a full YuE2 run directory (B2's audio was staged flat),
-  and gold anchors if the model choice should be decided by accuracy.
+  into word JSON + line-level VTT/SRT + player + QA report. It has now run on a
+  real **4-song YuE2 run directory**: 4/4 songs, 570 words, 0 silent-intro
+  violations (`results/a1/yue2-real/`). The A0a smoke run reproduced word 0 at
+  **21.481 s** (A0a: 21.48 s), 120/120 words. See
+  [docs/A1-RUNBOOK.md](../docs/A1-RUNBOOK.md).
+- **Still open:** gold anchors if the model choice should be decided by
+  accuracy, and an ear check on the weakest real song (on/off 1.73, coverage
+  0.912).

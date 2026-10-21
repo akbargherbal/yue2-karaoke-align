@@ -23,7 +23,9 @@ index.html             links to every song player
 
 Subtitles are **line-level** on purpose: one cue per lyric line is what a
 subtitle player can display. Word-level timing lives in the JSON and drives the
-HTML player.
+HTML player. The player links its audio by relative path (default: the full
+mix), so it travels with the audio it was generated from; move the WAV and
+regenerate the page (timings are unchanged).
 
 ## Run it on a YuE2 run directory
 
@@ -100,9 +102,12 @@ derived VTT/SRT/player files are regenerated. `--force` re-aligns.
 Then **listen**. Numbers are necessary, not sufficient; open
 `<song>.player.html` and check the first few lines for drift.
 
-## Smoke result (2026-10-21)
+## Validation runs (2026-10-21)
 
-The pipeline was smoke-tested on the A0a Suno track (no YuE2 render was local):
+### Smoke — A0a Suno track
+
+No YuE2 render was staged locally at first, so the pipeline was smoke-tested on
+the A0a proxy:
 
 | | |
 |---|---|
@@ -110,9 +115,38 @@ The pipeline was smoke-tested on the A0a Suno track (no YuE2 render was local):
 | Words | 120/120, 24 line cues |
 | First word | **21.481 s** (A0a: 21.48 s) |
 | Coverage / on-off / intro | 0.971 / 2.15 / ok |
-| Cost | Demucs 50 s + align ≈ 35 s on CPU |
+| Cost | Demucs 50 s + align ≈ 38 s on CPU |
 
 Artifacts: `results/a1/suno-smoke/`.
 
-The remaining real-data check is A1 on a **YuE2 run directory** (the B2 songs
-were staged flat on the Colab box, not as a full run dir). The command is above.
+### Real — a 4-song YuE2 run directory
+
+Run `20261021-045926_ibn_zuraiq_21102026_backing_formatted`, fetched read-only
+from the GCS backup into `/tmp`, one render per prompt:
+
+| song | words | coverage | on/off | intro | cues |
+|---|---|---|---|---|---|
+| `01-العذل-والمطامع-وفلسفة-الرزق` | 172/172 | 0.945 | 2.41 | ok | 32 line |
+| `02-استيداع-قمر-بغداد-ولوعة-الوداع` | 125/125 | 1.000 | 2.89 | ok | 24 line |
+| `03-تجرع-مرارة-البين-ووخز-الندم` | 148/148 | 0.977 | 3.02 | ok | 26 line |
+| `04-مناجاة-ديار-الأنس-ورجاء-التلاقي` | 125/125 | 0.912 | 1.73 | ok | 24 line |
+
+**4/4 songs, 570 words, 0 silent-intro violations.** Artifacts and the
+per-song players: `results/a1/yue2-real/`.
+
+Warnings are the expected ones, not path loss:
+
+- Long gaps (up to 30 s) all fall on **low-energy instrumental sections**
+  (gap RMS ~0.02–0.06 vs ~0.13 on word spans), i.e. the aligner correctly
+  waited through intros/interludes.
+- Song 1's last word absorbs the outro (**11.4 s**); songs 2's absorbs 6.5 s.
+  This is the same A0a caveat — harmless for line display, wrong for exact
+  word timing at the tail.
+- Song 4 tracks words at on/off **1.73** (still on the voice) with coverage
+  0.912 — the weakest of the four, worth a listen before trusting word-level
+  precision there.
+
+The real-data test also found and fixed two things the smoke track could not:
+the sibling prompts' `///***///` banner was being counted as a lyric word, and
+a vocabulary-dropped word shifted every later line (alignment now returns
+`src_i`, so line mapping survives drops).

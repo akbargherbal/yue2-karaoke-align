@@ -53,6 +53,7 @@ from duel_verdict import lead_silence_s  # noqa: E402
 AUDIO_SUFFIXES = {".wav", ".flac", ".mp3"}
 PROMPT_SUFFIX = "_lyrics.txt"
 SLUG_RE = re.compile(r"[^\w.-]+", re.UNICODE)
+ARABIC_RE = re.compile(r"[\u0621-\u064a\u0671-\u06d3]")
 
 
 # --- input discovery -------------------------------------------------------
@@ -117,6 +118,11 @@ def lyric_structure(text: str) -> tuple[list[tuple[str, list[str]]], list[str]]:
     """
     per_line: list[tuple[str, list[str]]] = []
     for line in lyric_lines(text):
+        # Sibling prompt files may carry a `///***///` banner or other
+        # non-lyric header. Section tags are already removed; anything with no
+        # Arabic letter is not sung text.
+        if not ARABIC_RE.search(line):
+            continue
         tokens = [t.strip(EDGE_PUNCT) for t in line.split()]
         tokens = [t for t in tokens if t]
         if tokens:
@@ -125,13 +131,33 @@ def lyric_structure(text: str) -> tuple[list[tuple[str, list[str]]], list[str]]:
     return per_line, flat
 
 
-def assign_lines(words: list[dict], per_line: list[tuple[str, list[str]]]) -> bool:
-    """Attach a `line` index to every aligned word, in order.
+def assign_lines(words: list[dict], per_line: list[tuple[str, list[str]]],
+                 flat: list[str]) -> bool:
+    """Attach a `line` index to every aligned word.
 
-    Returns False (leaving words as-is) when the aligner dropped a word, because
-    the sequential mapping would then be off by one from that point on.
+    Aligned words normally carry `src_i` (the index of the input word they came
+    from), so a word dropped by the model vocab does not shift the rest. Older
+    word lists have no `src_i`; those fall back to a sequential mapping, which
+    is only valid when every word aligned.
     """
-    expected = sum(len(tokens) for _, tokens in per_line)
+    src_line: list[int] = []
+    for li, (_, tokens) in enumerate(per_line):
+        src_line.extend([li] * len(tokens))
+
+    if words and all("src_i" in w for w in words) and len(src_line) == len(flat):
+        mapped = 0
+        for w in words:
+            si = w["src_i"]
+            if 0 <= si < len(src_line):
+                w["line"] = src_line[si]
+                mapped += 1
+        if mapped == len(words):
+            return True
+        for w in words:
+            w.pop("line", None)
+        return False
+
+    expected = len(flat)
     if len(words) != expected:
         return False
     k = 0
@@ -261,7 +287,7 @@ def align_one(song: dict, proc, model, model_id: str, revision: str | None,
                          model_id, song["name"], device)
     elapsed = time.monotonic() - t0
     words = res["words"]
-    mapped = assign_lines(words, per_line)
+    mapped = assign_lines(words, per_line, flat)
     m, warns = qa(words, res["duration_s"], 2.0)
     lead = lead_silence_s(stem)
     first = words[0]["start"] if words else None

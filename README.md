@@ -84,11 +84,11 @@ one CTC frame and is kept as a spare.
 
 `scripts/a1_align_run.py` now takes a run directory (or a flat staged dir) and
 writes word JSON, line-level VTT/SRT, a karaoke player, a QA report and an
-index page. See [docs/A1-RUNBOOK.md](docs/A1-RUNBOOK.md). A smoke run on the
-A0a track reproduced its first word at **21.481 s** (A0a: 21.48 s), 120/120
-words, 24 line cues.
+index page. See [docs/A1-RUNBOOK.md](docs/A1-RUNBOOK.md). It has been run on a
+**real 4-song YuE2 run directory**: 4/4 songs, 570 words, 0 silent-intro
+violations (`results/a1/yue2-real/`). A Suno smoke run reproduced A0a's first
+word at **21.481 s** (A0a: 21.48 s).
 
-**Not done:** A1 has not yet been run on a full YuE2 run directory (B2's songs
-were staged flat on the Colab box); the model choice is still a tie broken on
-cost rather than gold anchors; and **Track B (native extraction) has not
+**Not done:** the base/Quran model choice is still a cost tie rather than a
+gold-anchor accuracy decision, and **Track B (native extraction) has not
 started** — Phase 0 (the YuE2 tokenizer check) is still unrun.

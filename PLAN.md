@@ -214,10 +214,12 @@ training run, unlike every GPU phase of Track B. Protocol:
   directory and emits word JSON + line-level VTT/SRT + player + QA report.
   Protocol: [docs/A1-RUNBOOK.md](docs/A1-RUNBOOK.md).
 
-**Remaining Track A work:** run A1 on a full YuE2 run directory (B2's audio was
-staged flat), and add gold anchors if the model choice needs to be settled by
-accuracy rather than cost. A2 (a singing-trained acoustic model) remains
-optional.
+**Remaining Track A work:** gold anchors if the model choice needs to be
+settled by accuracy rather than cost, and a listen-through of the weakest real
+song (song 4, on/off 1.73, coverage 0.912). A2 (a singing-trained acoustic
+model) remains optional. The batch pipeline has now run on a real 4-song YuE2
+run directory: 4/4 songs, 570 words, 0 silent-intro violations
+(`results/a1/yue2-real/`).
 
 For choosing the acoustic model itself: [docs/BENCH-PLAN.md](docs/BENCH-PLAN.md)
 (metric design, shortlist, Colab procedure, decision rule).

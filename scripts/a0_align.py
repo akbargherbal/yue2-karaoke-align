@@ -163,9 +163,12 @@ def align_waveform(proc, model, waveform, words: list[str], strip_diac: bool | N
     if strip_diac is None:
         strip_diac = info["diacritic_chars_in_vocab"] == 0
 
-    def attempt(transform) -> list[tuple[str, str]]:
+    def attempt(transform) -> list[tuple[int, str, str]]:
         kept = [_keep_in_vocab(w, vocab, strip_diac, transform) for w in words]
-        return [(o, k) for o, k in zip(words, kept) if k]
+        # Keep the *source* index: words that do not survive the vocab are
+        # dropped, and downstream line mapping needs to know which input word
+        # each aligned word came from.
+        return [(i, o, k) for i, (o, k) in enumerate(zip(words, kept)) if k]
 
     pairs = attempt(None)
     translit = "none"
@@ -178,7 +181,7 @@ def align_waveform(proc, model, waveform, words: list[str], strip_diac: bool | N
     if translit != "none":
         print(f"[a0] model vocab needs {translit} transliteration "
               f"({len(pairs)}/{len(words)} words matched)", file=sys.stderr)
-    target_text = sep.join(k for _, k in pairs)
+    target_text = sep.join(k for _, _, k in pairs)
 
     inputs = proc(waveform, sampling_rate=16000, return_tensors="pt")
     with torch.no_grad():
@@ -210,10 +213,10 @@ def align_waveform(proc, model, waveform, words: list[str], strip_diac: bool | N
     def flush():
         nonlocal wi, cur_start, cur_end
         if wi < len(pairs) and cur_start is not None:
-            orig = pairs[wi][0]
+            src_i, orig, _ = pairs[wi]
             out_words.append(
-                {"i": wi, "word": orig, "start": round(cur_start, 3),
-                 "end": round(cur_end, 3)}
+                {"i": wi, "src_i": src_i, "word": orig,
+                 "start": round(cur_start, 3), "end": round(cur_end, 3)}
             )
             wi += 1
         cur_start = cur_end = None

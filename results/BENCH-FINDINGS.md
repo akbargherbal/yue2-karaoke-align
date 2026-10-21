@@ -220,10 +220,17 @@ scored. Only **gold anchors** (hand-checked word starts) can overturn this.
 
 `scripts/a1_align_run.py` now uses the base mirror and pinned revision above as
 its default, and turns a run directory into word JSON + line-level VTT/SRT +
-player + QA report. A smoke run on the A0a Suno track reproduced that trial's
-first word at **21.481 s** (A0a: 21.48 s), 120/120 words, 24 line cues, coverage
-0.971, on/off 2.15, silent-intro ok. Artifacts: `results/a1/suno-smoke/`;
-protocol: [docs/A1-RUNBOOK.md](../docs/A1-RUNBOOK.md).
+player + QA report. It has been validated twice:
+
+- **Real YuE2 run directory** (`20261021-045926_ibn_zuraiq...`, 4 songs):
+  **4/4 songs, 570 words, 0 silent-intro violations**; coverage 0.91–1.00,
+  on/off 1.73–3.02. The long gaps are low-energy instrumental sections, not
+  skipped lyrics. Artifacts: `results/a1/yue2-real/`.
+- **A0a Suno track:** word 0 at **21.481 s** (A0a: 21.48 s), 120/120 words,
+  24 line cues. Artifacts: `results/a1/suno-smoke/`.
+
+Protocol: [docs/A1-RUNBOOK.md](../docs/A1-RUNBOOK.md).
 
 The model tie remains a tie: A1 does not create a gold set. If accuracy matters
-enough to overturn the decision, hand-check anchors first.
+enough to overturn the decision, hand-check anchors first. The weakest real
+song (on/off 1.73, coverage 0.912) is the first one to listen to.

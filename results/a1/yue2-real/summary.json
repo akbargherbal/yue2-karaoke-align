@@ -1,0 +1,118 @@
+{
+  "run": "a1real",
+  "generated_at": "2026-10-21T15:49:11Z",
+  "model": "akbargherbal/wav2vec2-large-xlsr-53-arabic",
+  "revision": "4ca1c9c6ac85d839eebc530ec85b6a89f697e4e8",
+  "device": "cpu",
+  "songs": [
+    {
+      "song": "01-العذل-والمطامع-وفلسفة-الرزق",
+      "ok": true,
+      "n_words_in": 172,
+      "n_words_aligned": 172,
+      "duration_s": 279.12,
+      "align_s": 65.9,
+      "lead_silence_s": 17.5,
+      "intro_violation": false,
+      "line_mapping": "line",
+      "warnings": [
+        "6 gaps > 2.0s (max 3.08s) -- skipped stretches",
+        "longest single word spans 11.441s (melisma, or a collapsed phrase)"
+      ],
+      "coverage": 0.945,
+      "monotone": true,
+      "on_off_ratio": 2.41,
+      "files": {
+        "words_json": "results/a1/yue2-real/01-العذل-والمطامع-وفلسفة-الرزق.words.json",
+        "vtt": "results/a1/yue2-real/01-العذل-والمطامع-وفلسفة-الرزق.vtt",
+        "srt": "results/a1/yue2-real/01-العذل-والمطامع-وفلسفة-الرزق.srt",
+        "player": "results/a1/yue2-real/01-العذل-والمطامع-وفلسفة-الرزق.player.html",
+        "subtitle_granularity": "line",
+        "cues": 32
+      }
+    },
+    {
+      "song": "02-استيداع-قمر-بغداد-ولوعة-الوداع",
+      "ok": true,
+      "n_words_in": 125,
+      "n_words_aligned": 125,
+      "duration_s": 242.8,
+      "align_s": 58.9,
+      "lead_silence_s": 18.0,
+      "intro_violation": false,
+      "line_mapping": "line",
+      "warnings": [
+        "7 gaps > 2.0s (max 28.542s) -- skipped stretches"
+      ],
+      "coverage": 1.0,
+      "monotone": true,
+      "on_off_ratio": 2.89,
+      "files": {
+        "words_json": "results/a1/yue2-real/02-استيداع-قمر-بغداد-ولوعة-الوداع.words.json",
+        "vtt": "results/a1/yue2-real/02-استيداع-قمر-بغداد-ولوعة-الوداع.vtt",
+        "srt": "results/a1/yue2-real/02-استيداع-قمر-بغداد-ولوعة-الوداع.srt",
+        "player": "results/a1/yue2-real/02-استيداع-قمر-بغداد-ولوعة-الوداع.player.html",
+        "subtitle_granularity": "line",
+        "cues": 24
+      }
+    },
+    {
+      "song": "03-تجرع-مرارة-البين-ووخز-الندم",
+      "ok": true,
+      "n_words_in": 148,
+      "n_words_aligned": 148,
+      "duration_s": 262.96,
+      "align_s": 68.2,
+      "lead_silence_s": 1.5,
+      "intro_violation": false,
+      "line_mapping": "line",
+      "warnings": [
+        "18 gaps > 2.0s (max 30.202s) -- skipped stretches"
+      ],
+      "coverage": 0.977,
+      "monotone": true,
+      "on_off_ratio": 3.02,
+      "files": {
+        "words_json": "results/a1/yue2-real/03-تجرع-مرارة-البين-ووخز-الندم.words.json",
+        "vtt": "results/a1/yue2-real/03-تجرع-مرارة-البين-ووخز-الندم.vtt",
+        "srt": "results/a1/yue2-real/03-تجرع-مرارة-البين-ووخز-الندم.srt",
+        "player": "results/a1/yue2-real/03-تجرع-مرارة-البين-ووخز-الندم.player.html",
+        "subtitle_granularity": "line",
+        "cues": 26
+      }
+    },
+    {
+      "song": "04-مناجاة-ديار-الأنس-ورجاء-التلاقي",
+      "ok": true,
+      "n_words_in": 125,
+      "n_words_aligned": 125,
+      "duration_s": 211.64,
+      "align_s": 48.8,
+      "lead_silence_s": 0.5,
+      "intro_violation": false,
+      "line_mapping": "line",
+      "warnings": [
+        "16 gaps > 2.0s (max 3.68s) -- skipped stretches"
+      ],
+      "coverage": 0.912,
+      "monotone": true,
+      "on_off_ratio": 1.73,
+      "files": {
+        "words_json": "results/a1/yue2-real/04-مناجاة-ديار-الأنس-ورجاء-التلاقي.words.json",
+        "vtt": "results/a1/yue2-real/04-مناجاة-ديار-الأنس-ورجاء-التلاقي.vtt",
+        "srt": "results/a1/yue2-real/04-مناجاة-ديار-الأنس-ورجاء-التلاقي.srt",
+        "player": "results/a1/yue2-real/04-مناجاة-ديار-الأنس-ورجاء-التلاقي.player.html",
+        "subtitle_granularity": "line",
+        "cues": 24
+      }
+    }
+  ],
+  "totals": {
+    "songs": 4,
+    "ok": 4,
+    "failed": 0,
+    "words": 570,
+    "intro_violations": 0,
+    "warned_songs": 4
+  }
+}
