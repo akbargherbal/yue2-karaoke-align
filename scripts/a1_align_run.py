@@ -58,19 +58,19 @@ ARABIC_RE = re.compile(r"[\u0621-\u064a\u0671-\u06d3]")
 
 # --- input discovery -------------------------------------------------------
 
-def match_prompt(wav_stem: str, prompts: dict[str, Path]) -> tuple[str, Path] | None:
+def match_prompt(wav_stem: str, prompts: dict[str, Path]) -> Path | None:
     """Find the lyrics prompt for a `<name>_<seed>.wav`.
 
     YuE2 writes `prompts/<name>_lyrics.txt` and `<name>_<seed>.wav`, but the
     seed is not recorded in the prompt, so the match is by longest prompt name
     that prefixes the WAV stem (at an `_` boundary).
     """
-    best: tuple[str, Path] | None = None
+    best: tuple[int, Path] | None = None
     for name, path in prompts.items():
         if wav_stem == name or wav_stem.startswith(name + "_"):
-            if best is None or len(name) > len(best[0]):
-                best = (name, path)
-    return best
+            if best is None or len(name) > best[0]:
+                best = (len(name), path)
+    return best[1] if best else None
 
 
 def discover_run(run_dir: Path) -> list[dict]:
@@ -83,13 +83,15 @@ def discover_run(run_dir: Path) -> list[dict]:
     for audio in sorted(run_dir.iterdir()):
         if not audio.is_file() or audio.suffix.lower() not in AUDIO_SUFFIXES:
             continue
-        hit = match_prompt(audio.stem, prompts)
+        caption = match_prompt(audio.stem, prompts)
         songs.append({
-            "name": hit[0] if hit else audio.stem,
+            # Name by the WAV stem, not the prompt: a run dir has one WAV per
+            # seed and naming by prompt would make the takes collide.
+            "name": audio.stem,
             # absolute(), not resolve(): following a symlink would rename the
             # stem cache from the render's name to the target's ("vocals").
             "audio": str(audio.absolute()),
-            "caption": str(hit[1].absolute()) if hit else None,
+            "caption": str(caption.absolute()) if caption else None,
         })
     return songs
 

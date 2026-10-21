@@ -27,37 +27,92 @@ HTML player. The player links its audio by relative path (default: the full
 mix), so it travels with the audio it was generated from; move the WAV and
 regenerate the page (timings are unchanged).
 
-## Run it on a YuE2 run directory
+## Input: the minimum shape
 
-The sibling's `generate.py` / `run_one.sh` layout is:
+One song is enough: an audio file plus a UTF-8 lyrics file. There is **no
+manifest, no timestamps, and no pre-separation required**.
+
+### A. Run directory (recommended — matches the sibling)
 
 ```
-out/<run>/
-  <name>_<seed>.wav
-  prompts/<name>_lyrics.txt
+my_song/
+  my_song_1234.wav
+  prompts/
+    my_song_lyrics.txt
 ```
-
-so:
 
 ```bash
-cd yue2-karaoke-align
-.venv/bin/python scripts/a1_align_run.py \
-    --run-dir /path/to/out/20261014-093128_batch_02_formatted \
+.venv/bin/python scripts/a1_align_run.py --run-dir /path/to/my_song \
     --device cpu --sep-device cpu
 ```
 
-The run directory is **read only**. Vocal stems are cached under
-`work/stems/htdemucs/<wav stem>/vocals.wav` and reused on later runs.
+Rules:
 
-## Other input modes
+- Audio sits directly in the run directory. `.wav`, `.flac`, `.mp3` are accepted.
+- The prompt is exactly `prompts/<name>_lyrics.txt`. `<name>` must equal the WAV
+  stem or be a prefix ending at `_`: `my_song` matches `my_song.wav` **and**
+  `my_song_1234.wav`.
+- The `prompts` directory name is literal.
+- Outputs are keyed by the **WAV stem**, so two seeds of the same lyric
+  (`my_song_111.wav`, `my_song_222.wav`) do not collide.
+- The run directory is **read only**; output defaults to
+  `results/a1/<directory-name>/`.
+- Vocal stems are cached under `work/stems/htdemucs/<wav stem>/vocals.wav` and
+  reused on later runs.
+
+### B. Flat directory (exactly two files, same basename)
+
+```
+my_song/
+  my_song.mp3
+  my_song.txt
+```
 
 ```bash
-# a flat staged directory: <name>.mp3/.wav + <name>.txt
-.venv/bin/python scripts/a1_align_run.py --data-dir data/yue2_songs --auto-songs
-
-# explicit song list (same format as scripts/bench.py)
-.venv/bin/python scripts/a1_align_run.py --songs bench/songs.json --data-dir data/yue2_songs
+.venv/bin/python scripts/a1_align_run.py --data-dir /path/to/my_song --auto-songs
 ```
+
+`--auto-songs` pairs `<name>.txt` with `<name>.mp3` (or `.wav`). For `.flac`, or
+if the basenames differ, use mode C.
+
+### C. Explicit song list (anything non-standard)
+
+```json
+[
+  {"name": "my_song", "audio": "my_song.flac", "caption": "lyrics/my_song.txt"}
+]
+```
+
+```bash
+.venv/bin/python scripts/a1_align_run.py --songs songs.json --data-dir /path/to/dir
+```
+
+Paths are relative to `--data-dir` (or to the JSON file if `--data-dir` is
+omitted). `name` controls the output filename and report label, so it must be
+unique per song.
+
+### Lyrics file rules
+
+- UTF-8 text, **one sung line per line**. Line breaks become VTT/SRT cues and
+  player line breaks.
+- Arabic script, diacritized is preferred. The aligner's vocabulary contains the
+  full harakat set; it strips them only if a model lacks them.
+- Section tags (`[Verse 1 | ...]`), an optional `[Lyrics]` marker, and any line
+  with no Arabic letter (banners, English headings, translations) are dropped
+  automatically.
+- Include **only text that is actually sung**. Repeat repeated lines. Omit
+  unsung ad-libs/translations: extra words shift the forced path, and missing
+  words cannot be recovered by the aligner.
+- Punctuation at word edges is ignored. Timestamps are not used and will be
+  treated as words — don't include them.
+
+### Audio rules
+
+- Anything `soundfile` can read (WAV/FLAC/MP3); stereo is fine and is downmixed
+  to 16 kHz mono internally.
+- Do **not** pre-separate: Demucs runs automatically and the stem is cached.
+- If you already have a vocal stem, place it at
+  `<stems-dir>/htdemucs/<wav stem>/vocals.wav` and pass `--skip-separation`.
 
 ## Rehearse first
 
@@ -126,10 +181,10 @@ from the GCS backup into `/tmp`, one render per prompt:
 
 | song | words | coverage | on/off | intro | cues |
 |---|---|---|---|---|---|
-| `01-العذل-والمطامع-وفلسفة-الرزق` | 172/172 | 0.945 | 2.41 | ok | 32 line |
-| `02-استيداع-قمر-بغداد-ولوعة-الوداع` | 125/125 | 1.000 | 2.89 | ok | 24 line |
-| `03-تجرع-مرارة-البين-ووخز-الندم` | 148/148 | 0.977 | 3.02 | ok | 26 line |
-| `04-مناجاة-ديار-الأنس-ورجاء-التلاقي` | 125/125 | 0.912 | 1.73 | ok | 24 line |
+| `01-العذل-والمطامع-وفلسفة-الرزق_3064210` | 172/172 | 0.945 | 2.41 | ok | 32 line |
+| `02-استيداع-قمر-بغداد-ولوعة-الوداع_1072565065` | 125/125 | 1.000 | 2.89 | ok | 24 line |
+| `03-تجرع-مرارة-البين-ووخز-الندم_1891521623` | 148/148 | 0.977 | 3.02 | ok | 26 line |
+| `04-مناجاة-ديار-الأنس-ورجاء-التلاقي_2395913353` | 125/125 | 0.912 | 1.73 | ok | 24 line |
 
 **4/4 songs, 570 words, 0 silent-intro violations.** Artifacts and the
 per-song players: `results/a1/yue2-real/`.
