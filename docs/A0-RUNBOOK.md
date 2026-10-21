@@ -6,6 +6,12 @@ known diacritized lyrics into usable word timings?**
 It is cheap (CPU, no GPU contention), and it produces the reference alignment
 that Track B needs for validation regardless of which route wins.
 
+> **Status (2026-10-21): A0 is complete.** A0a passed on the Suno proxy; A0b was
+> satisfied at scale by the B2 benchmark (6 models × 8 real YuE2 renders, see
+> [BENCH-FINDINGS.md](../results/BENCH-FINDINGS.md)). This document is kept as
+> the one-track protocol and the explanation of the screen. For batch output use
+> [A1-RUNBOOK.md](A1-RUNBOOK.md).
+
 ## Scope and honesty
 
 - **A0a — Suno proxy (available now).** The only audio on hand is the v3
@@ -72,7 +78,9 @@ scripts/a0_separate.sh "$SUBJECT.mp3" work/separated
 ## Decision
 
 - **Line/phrase boundaries land convincingly** ⇒ Track A is viable at word
-  granularity; go to A1 (harden + emit VTT/SRT + player). Then run A0b.
+  granularity. (This is what happened: see `results/A0-FINDINGS.md` and
+  `results/BENCH-FINDINGS.md`.) Use [A1-RUNBOOK.md](A1-RUNBOOK.md) for the
+  batch pipeline.
 - **Anchors are mush, or drift runs away** ⇒ Route A is likely dead for this
   corpus; record it and pivot to Track B (native extraction).
 - **Ambiguous** ⇒ try the other aligner family (MFA with an Arabic dictionary,

@@ -26,3 +26,5 @@ echo "  2. smoke:  python scripts/bench.py --models bench/models.txt --songs ben
 echo "               --data-dir <DIR> --out results/bench --device cuda --sep-device cuda \\"
 echo "               --limit-models 1 --limit-songs 1"
 echo "  3. sweep:  the same without --limit-*"
+echo "  4. karaoke (A1): python scripts/a1_align_run.py --run-dir <RUN_DIR> \\"
+echo "               --device cuda --sep-device cuda"

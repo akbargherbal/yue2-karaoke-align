@@ -1,8 +1,9 @@
 # ROUTE-A.md — post-hoc alignment, done properly
 
-Status: **reopened as Track A**, gated by a one-track trial (A0). Route A has
-already failed once in this project's experience; this document is why that
-failure is not conclusive, and what would make it conclusive.
+Status: **Track A is validated and has a batch pipeline** (A0a pass → B2 on 8
+real YuE2 renders → A1 in `scripts/a1_align_run.py`). Route A has already
+failed once in this project's experience; this document is why that failure was
+not conclusive, and what was actually tested.
 
 ## 1. The failure that already happened, named correctly
 
@@ -61,17 +62,22 @@ retrying with the other family.
 
 ## 5. Track A phases
 
-- **A0 — one-track trial (decisive, cheap).** Take **one existing rendered
-  WAV** from the sibling project. Separate vocals, run a *forced* aligner with
-  the known diacritized lyrics, and inspect the result (listen at the anchors,
-  look at the trace). No new generation.
-  **Gate:** if line boundaries land convincingly, Route A is viable at
-  line/phrase granularity — ship it. If the anchors are mush, Route A is
-  probably dead for this corpus and the effort pivots to Track B.
-- **A1 — harden.** If A0 passes: batch it, handle failure cases, emit
-  WebVTT/SRT/JSON, attach to the player (Phase 5).
+- **A0 — one-track trial (decisive, cheap). DONE.** Took one existing rendered
+  WAV, separated vocals, ran a *forced* aligner with the known diacritized
+  lyrics, and inspected the result. A0a (Suno proxy) passed; B2 repeated it on
+  **8 real YuE2 renders** with 6 models, eliminating MMS-1b (silent-intro
+  violations 8/8), the Egyptian model (collapsed) and the phoneme model
+  (inverted energy). Results: [../results/A0-FINDINGS.md](../results/A0-FINDINGS.md),
+  [../results/BENCH-FINDINGS.md](../results/BENCH-FINDINGS.md).
+- **A1 — harden. DONE.** Batch over a run directory, QA gates, line-level
+  WebVTT/SRT + word JSON, player attached, run report. `scripts/a1_align_run.py`;
+  protocol [A1-RUNBOOK.md](A1-RUNBOOK.md).
 - **A2 — only if needed.** Improve the lexicon/acoustic model; or train a
-  domain (singing) aligner from our own audio+text pairs.
+  domain (singing) aligner from our own audio+text pairs. Still open, and still
+  optional: the failure mode it would fix is accuracy at melisma, not method.
+- **Gold anchors — the remaining honest gap.** The base/Quran tie was broken on
+  cost, not accuracy. A small hand-checked anchor set is the only way to settle
+  it.
 
 ## 6. Dual value
 

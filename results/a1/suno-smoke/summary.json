@@ -1,0 +1,42 @@
+{
+  "run": "a1suno",
+  "generated_at": "2026-10-21T15:34:54Z",
+  "model": "akbargherbal/wav2vec2-large-xlsr-53-arabic",
+  "revision": "4ca1c9c6ac85d839eebc530ec85b6a89f697e4e8",
+  "device": "cpu",
+  "songs": [
+    {
+      "song": "ajam_Lamiyat_Alshanfara_16082026_004_bb17d099",
+      "ok": true,
+      "n_words_in": 120,
+      "n_words_aligned": 120,
+      "duration_s": 192.65,
+      "align_s": 37.5,
+      "lead_silence_s": 20.5,
+      "intro_violation": false,
+      "line_mapping": "line",
+      "warnings": [
+        "12 gaps > 2.0s (max 3.561s) -- skipped stretches"
+      ],
+      "coverage": 0.971,
+      "monotone": true,
+      "on_off_ratio": 2.15,
+      "files": {
+        "words_json": "results/a1/suno-smoke/ajam_Lamiyat_Alshanfara_16082026_004_bb17d099.words.json",
+        "vtt": "results/a1/suno-smoke/ajam_Lamiyat_Alshanfara_16082026_004_bb17d099.vtt",
+        "srt": "results/a1/suno-smoke/ajam_Lamiyat_Alshanfara_16082026_004_bb17d099.srt",
+        "player": "results/a1/suno-smoke/ajam_Lamiyat_Alshanfara_16082026_004_bb17d099.player.html",
+        "subtitle_granularity": "line",
+        "cues": 24
+      }
+    }
+  ],
+  "totals": {
+    "songs": 1,
+    "ok": 1,
+    "failed": 0,
+    "words": 120,
+    "intro_violations": 0,
+    "warned_songs": 1
+  }
+}

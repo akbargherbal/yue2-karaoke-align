@@ -135,8 +135,13 @@ Both players are committed for ear comparison:
 
 ## Next
 
-- **A0b** — repeat on a real YuE2 render (`out/<run>/<name>_<seed>.wav` from the
-  sibling project). This is the actual answer; A0a only earned it.
-- If A0b passes → A1 (batch, SRT/VTT emit, attach the player).
-- If A0b fails but A0a passed, the difference is our audio, not the method —
-  worth one more aligner family before abandoning Track A.
+- **A0b — satisfied at scale on 2026-10-15.** The B2 benchmark re-ran this
+  pipeline on **8 real YuE2 renders** with 6 candidate models; three survived
+  the silent-intro test and agreed to ~0.02 s. See
+  [BENCH-FINDINGS.md](BENCH-FINDINGS.md). A0a's positive result did transfer.
+- **A1 — done (2026-10-21).** `scripts/a1_align_run.py` batches a run directory
+  into word JSON + line-level VTT/SRT + player + QA report. A smoke run on this
+  same track reproduced word 0 at **21.481 s** (A0a: 21.48 s), 120/120 words.
+  See [docs/A1-RUNBOOK.md](../docs/A1-RUNBOOK.md) and `results/a1/suno-smoke/`.
+- **Still open:** A1 on a full YuE2 run directory (B2's audio was staged flat),
+  and gold anchors if the model choice should be decided by accuracy.

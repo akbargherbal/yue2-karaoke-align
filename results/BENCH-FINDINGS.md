@@ -215,3 +215,15 @@ so "consensus" between them is self-agreement, and the whole bench's domain
 labels were poor predictors — `egyptian` (dialectal) collapsed, `phoneme-asr`
 failed energy tracking, `quran` matched its base, and only the plain baseline
 scored. Only **gold anchors** (hand-checked word starts) can overturn this.
+
+## A1 consumes this decision (2026-10-21)
+
+`scripts/a1_align_run.py` now uses the base mirror and pinned revision above as
+its default, and turns a run directory into word JSON + line-level VTT/SRT +
+player + QA report. A smoke run on the A0a Suno track reproduced that trial's
+first word at **21.481 s** (A0a: 21.48 s), 120/120 words, 24 line cues, coverage
+0.971, on/off 2.15, silent-intro ok. Artifacts: `results/a1/suno-smoke/`;
+protocol: [docs/A1-RUNBOOK.md](../docs/A1-RUNBOOK.md).
+
+The model tie remains a tie: A1 does not create a gold set. If accuracy matters
+enough to overturn the decision, hand-check anchors first.

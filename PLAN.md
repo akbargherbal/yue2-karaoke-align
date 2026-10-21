@@ -13,17 +13,19 @@ unless Phase 6 is explicitly opened.
 | | A — post-hoc forced alignment | B — native extraction (this spike) |
 |---|---|---|
 | Idea | Separate the vocal stem, then **force-align the known lyrics**. Use a *forced* aligner (MFA / Charsiu / aeneas), **not** an ASR aligner (WhisperX) — see [docs/ROUTE-A.md](docs/ROUTE-A.md) | Tap the AR stream during generation; the lyric→frame attention *is* the alignment |
-| Cost | ~2–4 days, **quality-gated** | ~3–5 days (demo) … ~1–2 weeks (production-faithful) |
-| Certainty | **Uncertain** — field experience (WhisperX hallucinating on sung audio) says this is not a drop-in | Unproven; one hard gate (monotonicity) and one parity gate |
+| Cost | ~2–4 days spent; **done** | ~3–5 days (demo) … ~1–2 weeks (production-faithful) |
+| Certainty | **Validated at word level** on 8 real YuE2 renders; one aligner family; no gold MAE yet | Unproven; one hard gate (monotonicity) and one parity gate |
 | Fidelity to our tracks | Exact (runs on our WAVs) — *if* the vocal stem separates cleanly | Depends on runtime parity (Phase 3) |
 | Extra deps | Vocal separator (Demucs/MDX) + a forced aligner + a G2P lexicon for diacritized Arabic | The YuE2 Python reference + hooks, or a C++ patch |
-| Status | **Reopened as Track A**, gated by a one-track trial (A0) | The thing being investigated |
+| Status | **Validated at word level on 8 real YuE2 renders; A1 batch pipeline done** (see below) | The thing being investigated |
 
-The honest headline: **neither route is cheap.** A *looked* cheap and isn't —
-the ASR family already failed here, and the forced-alignment family is
-untested. B is native but pays for it in instrumentation and runtime parity.
-Phase 0–2 remains the cheapest high-information slice, and its Phase 2 readout
-also answers a separate question (where the pronunciation knowledge is applied).
+The honest headline: **Track A works but is not the effortless win it looked
+like.** The ASR family already failed here; the forced-alignment family was
+tested, passed, and is now a CPU pipeline — with a speech-trained model on sung
+audio and no gold-anchor accuracy number. B is native but pays for it in
+instrumentation and runtime parity. Phase 0–2 remains the cheapest
+high-information remaining slice, and its Phase 2 readout also answers a
+separate question (where the pronunciation knowledge is applied).
 
 ## Hardware
 
@@ -143,6 +145,12 @@ base-model render acceptable as a proof?
 
 **Artifact / proof:** a subtitle file that plays in sync.
 
+> **Track A status (2026-10-21):** implemented end-to-end by
+> `scripts/a1_align_run.py` — word JSON (with lyric-line indices), line-level
+> VTT/SRT, player HTML, QA report. Track A uses the aligner's 20 ms CTC frames,
+> not Track B's 25 fps semantic frames; the frame→seconds step is already in
+> `a0_align.py`. Protocol: [docs/A1-RUNBOOK.md](docs/A1-RUNBOOK.md).
+
 ---
 
 ## Phase 5 — Browser player  *(CPU, ~½ day; parallelisable)*
@@ -150,6 +158,9 @@ base-model render acceptable as a proof?
 A single HTML page: audio element + lyrics with `<span>`s, a `timeupdate`
 handler that toggles a highlight class. Independent of alignment — build it now
 against hand-written timings to de-risk the fun part.
+
+> **Done.** `scripts/a0_player.py` renders a self-contained page (inline
+> timings, relative audio path, line breaks) and is called by A1.
 
 ---
 
@@ -165,33 +176,48 @@ and must not alter `run_one.sh` / `generate.py`.
 
 | Path | Effort | Certainty |
 |---|---|---|
-| A — forced alignment (Track A) | ~2–4 days, gated by A0 | **uncertain** — see [docs/ROUTE-A.md](docs/ROUTE-A.md) |
+| A — forced alignment (Track A) | **done** (A0 + B2 + A1); ~2–4 days spent | **works at word level**; accuracy ceiling unmeasured |
 | B — native, base-model demo | ~3–5 days | medium |
 | B — native, our-LoRA faithful | ~1–2 weeks | low (C++/CUDA risk) |
-| Player only | ~½ day | high |
+| Player only | **done** (~½ day) | high |
 
-**Verdict:** doable as a demo; a headache as a feature. **Track A0 is the single
-cheapest decisive test** and needs no GPU. The P0–P2 slice is the cheap,
-high-information part of Track B (and has dual value: it also reveals *where*
+**Verdict:** Track A is the shipping path. It answers the original question
+(word-level karaoke timings on our renders) with a CPU-only pipeline. Track B
+is now an optional fidelity experiment, not the only route: its P0–P2 slice is
+still the cheap, high-information part and has dual value (it reveals *where*
 the pronunciation knowledge is applied). Phases 3+ are where it becomes a
 project.
 
-## Track A — post-hoc alignment (reopened)
+## Track A — post-hoc alignment (validated, shipping)
 
-Gated by **A0**: one existing rendered WAV → separate vocals → a *forced*
-aligner (MFA / Charsiu / aeneas — **not** WhisperX) with the known diacritized
-lyrics → inspect. If line/phrase boundaries land convincingly, Route A is
-viable; if the anchors are mush, it is dead for this corpus and effort pivots to
-Track B. Detail, risks and dual value: [docs/ROUTE-A.md](docs/ROUTE-A.md).
+A0 asked: one rendered WAV → separate vocals → a *forced* aligner (MFA /
+Charsiu / aeneas — **not** WhisperX) with the known diacritized lyrics →
+inspect. It passed, and B2 then ran the same method over **8 real YuE2
+renders** with 6 candidate models. Detail, risks and dual value:
+[docs/ROUTE-A.md](docs/ROUTE-A.md).
 
-A0 **can run on CPU** (separation + alignment, slower) — so it does not contend
-with a training run, unlike every GPU phase of Track B.
-Protocol and exact commands: [docs/A0-RUNBOOK.md](docs/A0-RUNBOOK.md).
+A0 runs on CPU (separation + alignment, slower) — so it does not contend with a
+training run, unlike every GPU phase of Track B. Protocol:
+[docs/A0-RUNBOOK.md](docs/A0-RUNBOOK.md).
 
-**A0a result (2026-10-15): PASS on the objective screen** — 120/120 words,
-monotone, coverage 1.0, and no words placed in the silent 21 s intro of the
-vocal stem. Full numbers + caveats: [results/A0-FINDINGS.md](results/A0-FINDINGS.md).
-**A0b (a real YuE2 render) is the remaining gate** — A0a used a Suno proxy.
+**Results**
+
+- **A0a (2026-10-15): PASS on the objective screen** — 120/120 words, monotone,
+  coverage 1.0, no words in the 21 s silent intro (Suno proxy). Full numbers:
+  [results/A0-FINDINGS.md](results/A0-FINDINGS.md).
+- **B2 (2026-10-15): the A0b gate, at scale** — 6 CTC models × 8 real YuE2
+  renders. MMS-1b put words in the silent intro 8/8; the Egyptian model
+  collapsed to one word/song; the phoneme model inverted energy tracking. Three
+  survivors agreed to ~0.02 s. Decision:
+  [results/BENCH-FINDINGS.md](results/BENCH-FINDINGS.md).
+- **A1 (2026-10-21): batch pipeline** — `scripts/a1_align_run.py` consumes a run
+  directory and emits word JSON + line-level VTT/SRT + player + QA report.
+  Protocol: [docs/A1-RUNBOOK.md](docs/A1-RUNBOOK.md).
+
+**Remaining Track A work:** run A1 on a full YuE2 run directory (B2's audio was
+staged flat), and add gold anchors if the model choice needs to be settled by
+accuracy rather than cost. A2 (a singing-trained acoustic model) remains
+optional.
 
 For choosing the acoustic model itself: [docs/BENCH-PLAN.md](docs/BENCH-PLAN.md)
 (metric design, shortlist, Colab procedure, decision rule).

@@ -56,6 +56,9 @@ const a = document.getElementById('a'), ly = document.getElementById('ly');
 const meta = document.getElementById('meta');
 const spans = [];
 W.forEach((w, i) => {
+  // A1 word lists carry a line index; break the block where the lyric line
+  // changes. Older lists have no `l`, and render as one continuous paragraph.
+  if (i > 0 && w.l !== undefined && w.l !== W[i-1].l) ly.appendChild(document.createElement('br'));
   const s = document.createElement('span');
   s.className = 'w'; s.textContent = w.w; s.dataset.i = i;
   ly.appendChild(s); spans.push(s);
@@ -84,6 +87,38 @@ requestAnimationFrame(tick);
 """
 
 
+def render_html(data: dict, audio, out: Path, title: str) -> Path:
+    """Write a self-contained player page from an a0/a1 word-timings dict.
+
+    `audio` is the file the page should play. It is linked by a relative path so
+    the page still works when opened from `file://`.
+    """
+    words = []
+    for w in data["words"]:
+        item = {"w": w["word"], "s": w["start"], "e": w["end"]}
+        if "line" in w:
+            item["l"] = w["line"]
+        words.append(item)
+
+    out = Path(out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    # relative path from the page to the audio, so the page is portable
+    rel = os.path.relpath(Path(audio).resolve(), out.resolve().parent)
+
+    diac = "diacritics stripped for alignment" if data.get(
+        "stripped_diacritics") else "diacritics kept"
+    html_text = (TEMPLATE
+                 .replace("__TITLE__", html.escape(title))
+                 .replace("__AUDIO__", html.escape(rel))
+                 .replace("__WORDS__", json.dumps(words, ensure_ascii=False))
+                 .replace("__N__", str(len(words)))
+                 .replace("__MODEL__", html.escape(str(data.get("model", "?"))))
+                 .replace("__DIAC__", diac))
+    out.write_text(html_text, encoding="utf-8")
+    print(f"wrote {out}  ({len(words)} words, audio -> {rel})")
+    return out
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--words", required=True, help="word-timings JSON from a0_align.py")
@@ -93,24 +128,7 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
 
     data = json.loads(Path(args.words).read_text(encoding="utf-8"))
-    words = [{"w": w["word"], "s": w["start"], "e": w["end"]} for w in data["words"]]
-
-    out = Path(args.out)
-    out.parent.mkdir(parents=True, exist_ok=True)
-    # relative path from the page to the audio, so the page is portable
-    rel = os.path.relpath(Path(args.audio).resolve(), out.resolve().parent)
-
-    diac = "diacritics stripped for alignment" if data.get(
-        "stripped_diacritics") else "diacritics kept"
-    html_text = (TEMPLATE
-                 .replace("__TITLE__", html.escape(args.title))
-                 .replace("__AUDIO__", html.escape(rel))
-                 .replace("__WORDS__", json.dumps(words, ensure_ascii=False))
-                 .replace("__N__", str(len(words)))
-                 .replace("__MODEL__", html.escape(str(data.get("model", "?"))))
-                 .replace("__DIAC__", diac))
-    out.write_text(html_text, encoding="utf-8")
-    print(f"wrote {out}  ({len(words)} words, audio -> {rel})")
+    render_html(data, args.audio, Path(args.out), args.title)
     return 0
 
 
