@@ -79,6 +79,11 @@ def discover_run(run_dir: Path) -> list[dict]:
     if prompt_dir.is_dir():
         for p in sorted(prompt_dir.glob("*" + PROMPT_SUFFIX)):
             prompts[p.name[:-len(PROMPT_SUFFIX)]] = p
+    else:
+        print(f"[a1] note: {run_dir.name}/ has no prompts/ directory. "
+              "Run-dir mode needs prompts/<name>_lyrics.txt; for a flat "
+              "<name>.mp3/.wav + <name>.txt folder use "
+              "--data-dir <dir> --auto-songs.", file=sys.stderr)
     songs: list[dict] = []
     for audio in sorted(run_dir.iterdir()):
         if not audio.is_file() or audio.suffix.lower() not in AUDIO_SUFFIXES:
@@ -258,8 +263,10 @@ def utc_now() -> str:
 
 def load_prompts(song: dict) -> tuple[list[tuple[str, list[str]]], list[str]]:
     if not song.get("caption"):
-        raise ValueError("no lyrics prompt found "
-                         "(expected prompts/<name>_lyrics.txt)")
+        raise ValueError(
+            "no lyrics prompt found (expected prompts/<name>_lyrics.txt); "
+            "for a flat <name>.mp3/.wav + <name>.txt folder use "
+            "--data-dir <dir> --auto-songs")
     caption = Path(song["caption"])
     if not caption.is_file():
         raise ValueError(f"lyrics prompt missing: {caption}")
