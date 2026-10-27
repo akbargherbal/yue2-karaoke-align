@@ -38,7 +38,34 @@ Environment: a Python venv with `torch`, `torchaudio`, `transformers`, `demucs`
 and `soundfile`; see [docs/A0-RUNBOOK.md](docs/A0-RUNBOOK.md#prerequisites-once).
 No GPU is required.
 
-The pipeline accepts two input shapes — pick the one that matches what you have:
+### The one-song recipe (TL;DR)
+
+One audio file + its lyrics. In order:
+
+1. **Same basename, one folder** — `song.mp3` + `song.txt`. The lyrics are
+   UTF-8, **one sung line per line**, and contain **only what is sung**, in
+   sung order: write a chorus again every time it is sung, and drop unsung
+   lines, ad-libs and translations. Line breaks become subtitle cues.
+2. **Rehearse** — lists the pairing, loads no model, writes nothing:
+   ```bash
+   .venv/bin/python scripts/a1_align_run.py --data-dir path/to/song --auto-songs --dry-run
+   ```
+3. **Align**:
+   ```bash
+   .venv/bin/python scripts/a1_align_run.py --data-dir path/to/song --auto-songs
+   ```
+   Expect ~3 min on CPU for a 5-minute song; Demucs dominates, and its vocal
+   stem is cached, so later runs are about a minute.
+4. **Open** `results/a1/song/song.player.html` — word-highlighting karaoke,
+   next to the `.words.json` and the line-level `.srt`/`.vtt`.
+
+If the basenames differ (`song.mp3` + `lyrics_song.txt`), point at the files
+explicitly with `--songs`
+([mode C](docs/A1-RUNBOOK.md#c-explicit-song-list-anything-non-standard)).
+
+### The two input shapes
+
+Pick the one that matches what you have:
 
 ```bash
 # 1. Flat pair: <name>.mp3/.wav + <name>.txt (same basename)

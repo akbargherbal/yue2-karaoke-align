@@ -100,9 +100,20 @@ unique per song.
 - Section tags (`[Verse 1 | ...]`), an optional `[Lyrics]` marker, and any line
   with no Arabic letter (banners, English headings, translations) are dropped
   automatically.
-- Include **only text that is actually sung**. Repeat repeated lines. Omit
-  unsung ad-libs/translations: extra words shift the forced path, and missing
-  words cannot be recovered by the aligner.
+- Include **only text that is actually sung**, in the order it is sung. The
+  aligner walks your text once, left to right, so **write a repeated line as
+  many times as it is sung** — if the chorus plays twice, it appears twice:
+
+  ```
+  <chorus line 1>
+  <chorus line 2>
+  <verse line 1>
+  <chorus line 1>   # the chorus is sung again: write it again
+  <chorus line 2>
+  ```
+
+  Omit unsung lines, ad-libs and translations: extra words shift the forced
+  path, and missing words cannot be recovered by the aligner.
 - Punctuation at word edges is ignored. Timestamps are not used and will be
   treated as words — don't include them.
 
@@ -154,8 +165,22 @@ derived VTT/SRT/player files are regenerated. `--force` re-aligns.
 5. **warnings** — long gaps are expected at line boundaries; a runaway last word
    or non-monotone path is not.
 
+**Long intro or outro:** when the song opens or closes with a long instrumental
+section, the last word can absorb the trailing silence and run to the end of the
+file. That makes **coverage read 1.0 even though the final word is wrong**, so
+check `word_dur_max_s` (or the tail of the player) too: a last word spanning
+tens of seconds is the tail caveat, not health. It is harmless for line display
+and wrong for exact word timing at the tail. Likewise, a long gap that falls
+*inside* a line may be swallowed by that line's last word instead of showing up
+as a gap.
+
 Then **listen**. Numbers are necessary, not sufficient; open
-`<song>.player.html` and check the first few lines for drift.
+`<song>.player.html` and check the first few lines for drift, and the last line
+for a stretched final word.
+
+Cost on CPU: roughly 3 minutes for a 5-minute song (Demucs dominates). The vocal
+stem is cached under `work/stems/`, so a re-run without `--force` is about a
+minute.
 
 ## Validation runs (2026-10-21)
 
@@ -188,6 +213,23 @@ caption with `[Intro]` / `[Verse]` tags) was run in flat mode:
 This is the same shape that fails if invoked with `--run-dir`; the tool now
 prints the flat-mode hint before loading the model. The source audio was outside
 this repo, so its artifacts are local rather than committed.
+
+### Flat — a commercial Arabic pop track
+
+The same flat shape on a commercial mix with a long instrumental intro and
+outro (`elissa_maktooba_leek.mp3` + lyrics, 317.1 s; audio outside this repo):
+
+| | |
+|---|---|
+| Words | 204/204, 40 line cues |
+| Coverage / on-off / intro | 1.000 / 1.74 / ok |
+| First word | 56.004 s (vocal stem silent for the first 55 s) |
+| Tail | last word runs 42.2 s to the file end (37 s of outro silence) |
+
+That run is why the tail check exists: coverage read 1.0 while the final word
+was wrong, and the interlude after the second chorus was absorbed by that
+line's last word (27.6 s) instead of appearing as a gap. Everything up to the
+interlude aligned monotonically.
 
 ### Real — a 4-song YuE2 run directory
 
