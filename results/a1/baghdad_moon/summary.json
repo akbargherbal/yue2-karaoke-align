@@ -1,0 +1,42 @@
+{
+  "run": "baghdad_moon",
+  "generated_at": "2026-10-21T16:16:12Z",
+  "model": "akbargherbal/wav2vec2-large-xlsr-53-arabic",
+  "revision": "4ca1c9c6ac85d839eebc530ec85b6a89f697e4e8",
+  "device": "cpu",
+  "songs": [
+    {
+      "song": "baghdad_moon",
+      "ok": true,
+      "n_words_in": 125,
+      "n_words_aligned": 125,
+      "duration_s": 215.9,
+      "align_s": 44.9,
+      "lead_silence_s": 1.5,
+      "intro_violation": false,
+      "line_mapping": "line",
+      "warnings": [
+        "14 gaps > 2.0s (max 17.081s) -- skipped stretches"
+      ],
+      "coverage": 0.981,
+      "monotone": true,
+      "on_off_ratio": 2.52,
+      "files": {
+        "words_json": "/home/akbar/Jupyter_Notebooks/OpenCode/yue2-karaoke-align/results/a1/baghdad_moon/baghdad_moon.words.json",
+        "vtt": "/home/akbar/Jupyter_Notebooks/OpenCode/yue2-karaoke-align/results/a1/baghdad_moon/baghdad_moon.vtt",
+        "srt": "/home/akbar/Jupyter_Notebooks/OpenCode/yue2-karaoke-align/results/a1/baghdad_moon/baghdad_moon.srt",
+        "player": "/home/akbar/Jupyter_Notebooks/OpenCode/yue2-karaoke-align/results/a1/baghdad_moon/baghdad_moon.player.html",
+        "subtitle_granularity": "line",
+        "cues": 24
+      }
+    }
+  ],
+  "totals": {
+    "songs": 1,
+    "ok": 1,
+    "failed": 0,
+    "words": 125,
+    "intro_violations": 0,
+    "warned_songs": 1
+  }
+}
