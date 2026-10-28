@@ -280,6 +280,10 @@ python scripts/lyrics_review.py --title-map index/lyrics/title_map.csv \
     --lyrics-root /tmp/lyrics/lyrics --out work/lyrics/review
 python scripts/review_build.py --out work/review/items.jsonl   # rebuild, now with excerpts
 
+# 1.5 optional: pull all 54 tracks up front (~520 MB) so cards open instantly
+python scripts/review_fetch.py --items work/review/items.jsonl \
+    --audio-dir work/review/audio --jobs 4
+
 # 2. serve
 python scripts/review_app.py \
     --items work/review/items.jsonl \
