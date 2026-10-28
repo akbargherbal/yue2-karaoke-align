@@ -215,7 +215,7 @@ def main(argv: list[str] | None = None) -> int:
     print("\nnext:")
     print(f"  python scripts/a1_align_run.py --songs {out}/pack.json \\\n"
           f"      --data-dir {out} --skip-separation --no-player \\\n"
-          f"      --out work/srt/{args.status}")
+          f"      --out work/srt/{args.status}{len(songs)}")
     return 0
 
 
