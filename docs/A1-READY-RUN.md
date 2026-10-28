@@ -1,11 +1,23 @@
 # A1-READY-RUN.md — align the `ready` set from the stem cache
 
-Status: **runbook, 2026-10-28.** Ten tracks are `ready` (sheet complete enough
-to align as written). This is the first batch that turns the cache into SRT
-files without touching Demucs.
+Status: **staging done, alignment moving to GPU, 2026-10-28.** Ten tracks are
+`ready` (sheet complete enough to align as written). This is the first batch
+that turns the cache into SRT files without touching Demucs.
 
 Prerequisite: the stem cache is complete (`docs/STEM-RUN-2026-10-28.md`) and the
 title map is v2 (`index/lyrics/`).
+
+Run log so far (UTC):
+
+| When | Step | Result |
+|---|---|---|
+| 18:00–18:01 | `ready_pack.py --fetch` | `EXIT=0`, 10/10 staged, 0 skipped, 181 MB |
+| 18:02 | smoke (`--limit 1`, CPU) | launched; model loaded, still aligning at 5 min |
+| — | 10-track batch | **not started**; waiting for the GPU runtime |
+
+The CPU smoke is the reason for the move: `torch 2.11.0+cpu`, no CUDA device,
+2 vCPUs and `torch.get_num_threads()=1`, so a 3.6-min track had not finished
+after 5 min. See §9.
 
 ---
 
@@ -22,8 +34,13 @@ sheet is just too compact to align line-by-line.
 |---|---:|
 | `ready` | 10 |
 | `needs_cleanup` | 3 |
-| `needs_expansion` | 150 |
-| no lyrics (`no_match` + `missing`) | 51 |
+| `needs_expansion` | 154 |
+| matched on the 214-track scope | 167 |
+| no lyrics on the 214-track scope | 47 |
+
+`readiness.csv` has 174 rows because it is the 236-row title map's view; 7 of
+those rows are longer than 360 s and are out of scope (no cached stem), leaving
+167 matched on the 214-track scope.
 
 ---
 
@@ -35,15 +52,33 @@ python scripts/ready_pack.py \
     --lyrics-root /tmp/lyrics/lyrics \
     --out work/ready-pack --fetch
 
-# 2. align: no separation, no player, outputs under gitignored work/
+# 2. smoke first: one track, same flags, separate output dir
+python scripts/a1_align_run.py --songs work/ready-pack/pack.json \
+    --data-dir work/ready-pack --skip-separation --no-player \
+    --out work/srt/smoke --limit 1
+
+# 3. only if the smoke exits 0: the ten
 python scripts/a1_align_run.py --songs work/ready-pack/pack.json \
     --data-dir work/ready-pack --skip-separation --no-player \
     --out work/srt/ready10
 
-# 3. read the verdict
+# 4. read the verdict
 cat work/srt/ready10/summary.json
 sed -n 1,60p work/srt/ready10/A1-REPORT.md
+ls work/srt/ready10/*.srt | wc -l
 ```
+
+Any step expected to take more than ~30 s (the fetch, either alignment) is run
+detached, so the session stays responsive:
+
+```bash
+mkdir -p work/logs
+setsid nohup bash -c 'python scripts/a1_align_run.py … ; echo "EXIT=$? $(date -Is)" >> work/logs/a1_ready10.log' \
+    > work/logs/a1_ready10.log 2>&1 < /dev/null &
+disown; echo $! > work/logs/a1_ready10.pid
+```
+
+A step is finished only when the log has an `EXIT=` line (or the PID is gone).
 
 `--lyrics-root` is the public clone:
 
@@ -88,8 +123,17 @@ sheet, or leave them out of the first batch.
 
 ## 5. Cost
 
-Alignment only: no Demucs. A 4-minute track is ~60–90 s on CPU, ~5–10 s on a
-GPU. Ten tracks: minutes, not hours.
+Alignment only: no Demucs, and the audio comes from the stem cache.
+
+| Box | Per 4-min track | Ten tracks (41.8 min audio) |
+|---|---|---|
+| CPU, 2 vCPU, `torch` 1 thread (this session) | **> 5 min** measured on track 1; ~1.5–3× real-time | **45–90 min**, not the 60–90 s first assumed |
+| GPU (CUDA wheel, model on device) | ~5–15 s | a few minutes including model load |
+
+The CPU numbers above are measured, not estimated: the smoke had used 4.5 min of
+CPU time on a 3.6-min track and had not produced timings. The single-thread
+default is the main culprit; `OMP_NUM_THREADS=2` helps but does not close the
+gap.
 
 ---
 
@@ -131,3 +175,74 @@ the URLs settled *identity*, not *completeness*.
 longer than 360 s that the stem cache never separated (they are absent from the
 manifest). `ready_pack.py` reports those as `no cached stems in the manifest`
 and skips them; every in-scope expansion track stages.
+
+---
+
+## 9. GPU switch (the plan as of 2026-10-28)
+
+The CPU box cannot finish this batch in a sitting: no CUDA device, 2 vCPUs and
+`torch` limited to one thread. Move the run to a GPU runtime; the stem cache and
+the lyrics stay remote, so nothing is lost but local `work/`.
+
+### 9.1 On the new runtime, before any work
+
+```bash
+nvidia-smi
+python -c "import torch; print(torch.__version__, torch.cuda.is_available(),
+          torch.version.cuda, torch.cuda.get_device_name(0) if torch.cuda.is_available() else '')"
+```
+
+- If `cuda.is_available()` is `False`, the installed torch is a CPU wheel: install
+  the CUDA build for the driver (e.g. `pip install --index-url
+  https://download.pytorch.org/whl/cu124 torch torchaudio`) and re-check. Do not
+  start aligning until this prints `True`.
+- `a1_align_run.py` defaults `--device` to `cuda` when CUDA is visible (§ code,
+  line ~490), so no extra flag is needed; pass `--device cuda` only to make the
+  choice explicit in the log.
+
+### 9.2 Stage again (work/ is local, gitignored)
+
+```bash
+cd /content/yue2-karaoke-align && git pull
+test -d /tmp/lyrics || git clone --depth 1 \
+    https://github.com/akbargherbal/arabic-music-lyrics /tmp/lyrics
+gcloud storage cat gs://akbar-december-2024-backup/STEMS/htdemucs/v1/manifest.jsonl \
+    | head -1            # permission check; stop if this errors
+python scripts/ready_pack.py --lyrics-root /tmp/lyrics/lyrics \
+    --out work/ready-pack --fetch
+```
+
+Expected: `staged 10 track(s)`, 0 skipped, ~181 MB. This is a re-download of
+`vocals.flac` (not a re-separation); Demucs is still untouched.
+
+### 9.3 Smoke, then the ten
+
+```bash
+# smoke: one track, foreground is still too long on CPU but fine on GPU;
+# keep the detached form anyway so the session never blocks
+setsid nohup bash -c 'python scripts/a1_align_run.py \
+    --songs work/ready-pack/pack.json --data-dir work/ready-pack \
+    --skip-separation --no-player --out work/srt/smoke --limit 1 \
+    --device cuda; echo "EXIT=$? $(date -Is)" >> work/logs/a1_smoke.log' \
+    > work/logs/a1_smoke.log 2>&1 < /dev/null &
+disown; echo $! > work/logs/a1_smoke.pid
+```
+
+Only after `EXIT=0` in `work/logs/a1_smoke.log`, launch the batch with the same
+flags and `--out work/srt/ready10`. One track failing must not stop the batch;
+`failed_qa` is counted, not deleted.
+
+### 9.4 Verdict
+
+Per track from `summary.json` / `A1-REPORT.md`: `n_words_aligned/n_words_in`
+(≥ 0.95), `qa.monotone` (true), `intro_violation` (false), `line_mapping`
+(`line`), `qa.max_gap_s` (report). Then `accepted` vs `failed_qa`, the failing
+track and its reason from the report, and the wall time from the `EXIT=` line.
+
+### 9.5 What not to do on the switch
+
+- Do not re-run Demucs; `--skip-separation` and the cached `vocals.flac` are the
+  whole point.
+- Do not push `work/` (ignored; it contains lyric text).
+- Do not expand to the 154 `needs_expansion` tracks before the 10-track batch
+  has an honest accept/fail number.
