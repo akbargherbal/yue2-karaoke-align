@@ -273,10 +273,12 @@ Effort: build ~2 h (build + app + export), test ~30 min, review ~30–40 min.
 python scripts/review_build.py --out work/review/items.jsonl
 #   → 54 cards {Elissa: 22, Fadl Shaker: 32}; 5 tracks >360 s dropped
 
-# optional: enrich the cards with two-line excerpts, if the lyric clone exists
+# optional (recommended): enrich the cards with two-line excerpts.
+# the lyrics repo is public, so a fresh clone needs nothing else
+git clone --depth 1 https://github.com/akbargherbal/arabic-music-lyrics /tmp/lyrics
 python scripts/lyrics_review.py --title-map index/lyrics/title_map.csv \
-    --lyrics-root /path/to/arabic-music-lyrics/lyrics --out work/lyrics/review
-python scripts/review_build.py --out work/review/items.jsonl   # rebuild
+    --lyrics-root /tmp/lyrics/lyrics --out work/lyrics/review
+python scripts/review_build.py --out work/review/items.jsonl   # rebuild, now with excerpts
 
 # 2. serve
 python scripts/review_app.py \

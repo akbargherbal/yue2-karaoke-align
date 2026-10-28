@@ -163,7 +163,13 @@ def main(argv: list[str] | None = None) -> int:
         print(f"dropped {dropped} track(s) longer than {args.max_duration:g}s")
     if not excerpts:
         print("cards have no excerpt text; the app shows titles, scores and "
-              "source links only (run scripts/lyrics_review.py to enrich)")
+              "source links only. To enrich:\n"
+              "  git clone --depth 1 https://github.com/akbargherbal/"
+              "arabic-music-lyrics /tmp/lyrics\n"
+              "  python scripts/lyrics_review.py --title-map "
+              "index/lyrics/title_map.csv \\\n"
+              "      --lyrics-root /tmp/lyrics/lyrics --out work/lyrics/review\n"
+              "  python scripts/review_build.py --out work/review/items.jsonl")
     if missing:
         print(f"WARNING: {len(missing)} audio object(s) not found in GCS:",
               file=sys.stderr)
