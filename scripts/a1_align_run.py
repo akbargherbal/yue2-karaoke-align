@@ -47,7 +47,7 @@ from a0_compare import energy_tracking  # noqa: E402
 from a0_lyrics import EDGE_PUNCT, lyric_lines  # noqa: E402
 from a0_player import render_html  # noqa: E402
 from a0_qa import qa  # noqa: E402
-from bench import ensure_stem, load_lock, read_models, resolve_songs  # noqa: E402
+from bench import ensure_stem, find_stem, load_lock, read_models, resolve_songs  # noqa: E402
 from duel_verdict import lead_silence_s  # noqa: E402
 
 AUDIO_SUFFIXES = {".wav", ".flac", ".mp3"}
@@ -284,10 +284,10 @@ def align_one(song: dict, proc, model, model_id: str, revision: str | None,
     if song.get("stems_dir"):
         stem = Path(song["stems_dir"])
     else:
-        stem = stems_root / "htdemucs" / audio.stem / "vocals.wav"
+        stem = find_stem(audio, stems_root)
     if skip_separation:
-        if not stem.is_file():
-            raise ValueError(f"--skip-separation but stem missing: {stem}")
+        if stem is None or not stem.is_file():
+            raise ValueError(f"--skip-separation but stem missing for {audio.name}")
     else:
         stem = ensure_stem(audio, stems_root, sep_device)
 

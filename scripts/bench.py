@@ -111,11 +111,26 @@ def resolve_songs(path: Path | None, data_dir: Path | None,
     return out
 
 
+def find_stem(audio: Path, stems_root: Path) -> Path | None:
+    """Cached vocal stem, accepting the GCS cache's FLAC and the local WAV.
+
+    The GCS stem cache (`docs/STEM-CACHE.md`) stores ``vocals.flac``; Demucs
+    writes ``vocals.wav``. Either satisfies a forced-alignment run.
+    """
+    base = stems_root / "htdemucs" / audio.stem
+    for name in ("vocals.flac", "vocals.wav"):
+        path = base / name
+        if path.is_file():
+            return path
+    return None
+
+
 def ensure_stem(audio: Path, stems_root: Path, device: str = "cpu") -> Path:
     """Demucs vocal stem, cached. Layout: <stems_root>/htdemucs/<name>/vocals.wav"""
+    found = find_stem(audio, stems_root)
+    if found is not None:
+        return found
     stem = stems_root / "htdemucs" / audio.stem / "vocals.wav"
-    if stem.is_file():
-        return stem
     print(f"[sep] {audio.name} on {device} ...", flush=True)
     t0 = time.monotonic()
     subprocess.run([sys.executable, "-m", "demucs", "--two-stems=vocals",
@@ -189,11 +204,11 @@ def main(argv: list[str] | None = None) -> int:
     # 1. stems once
     for s in songs:
         audio = Path(s["audio"])
-        stem = Path(s["stems_dir"]) if s.get("stems_dir") else (
-            Path(args.stems_dir) / "htdemucs" / audio.stem / "vocals.wav")
+        stem = Path(s["stems_dir"]) if s.get("stems_dir") else find_stem(
+            audio, stems_root)
         if args.skip_separation:
-            if not stem.is_file():
-                sys.exit(f"--skip-separation but stem missing: {stem}")
+            if stem is None or not stem.is_file():
+                sys.exit(f"--skip-separation but stem missing for {audio.name}")
         else:
             stem = ensure_stem(audio, stems_root, args.sep_device)
         s["stem"] = str(stem)

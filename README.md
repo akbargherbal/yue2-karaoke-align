@@ -120,6 +120,9 @@ docs/A0-RUNBOOK.md        Track A0 protocol: the one-track forced-alignment tria
 docs/A1-RUNBOOK.md        Track A1 protocol: batch → JSON/VTT/SRT/player
 docs/BENCH-PLAN.md        model selection: metrics, shortlist, Colab procedure
 docs/PARENT-CONTEXT.md    how this relates to the sibling project; scope boundary
+docs/CROSS-PROJECT.md     how this pipeline composes with the captioning + lyrics repos; coverage plan
+docs/STEM-CACHE.md        two-stem (vocals + instrumental) GCS cache contract
+docs/STEM-BATCH-RUNBOOK.md  one GPU pass: per-track failures, checkpoints, resume
 bench/models.txt          candidate acoustic models (CTC core set + stretch)
 bench/songs.json          the benchmark song set (2 per maqam)
 scripts/tokenizer_check.py   Phase 0, runnable on CPU
@@ -130,6 +133,9 @@ scripts/a0_qa.py             screen timings for aligner failure signatures
 scripts/a0_compare.py        cross-model agreement + energy tracking
 scripts/a0_player.py         self-contained karaoke HTML from word timings
 scripts/a1_align_run.py      batch a run dir → words.json + VTT/SRT + player
+scripts/gcs_inventory.py     GCS discography → inventory.csv (236 Elissa/Fadl tracks)
+scripts/gcs_stems.py         two-stem cache: audit / separate on GPU / fetch for A1
+scripts/lyrics_coverage.py   audio inventory × lyric scrapes → title map + coverage/readiness
 scripts/bench.py             the benchmark harness (models x songs)
 scripts/colab_setup.sh       one-shot Colab provisioning for the benchmark
 ```
