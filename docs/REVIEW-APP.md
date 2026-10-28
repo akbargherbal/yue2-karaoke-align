@@ -1,4 +1,4 @@
-# REVIEW-APP.md — browser review of the title map (L2), on Colab
+# REVIEW-APP.md — browser review of the title map (L2), local server
 
 Status: **plan, 2026-10-28.** Nothing here is built yet except the review sheet
 (`scripts/lyrics_review.py`). This document is the spec for the app.
@@ -101,48 +101,45 @@ committed. Only titles and decisions are exportable.
 
 | Step | Detail |
 |---|---|
-| Fetch | `gcloud storage cp <escaped gcs_uri> /content/review/audio/<id>.mp3` on first view |
+| Fetch | `gcloud storage cp <escaped gcs_uri> <audio-dir>/<id>.mp3` on first view |
 | Cache | file exists → serve; never re-download within the session |
 | Prefetch | after serving card *n*, a background thread fetches *n+1*, *n+2* |
 | Serve | `send_file(path, conditional=True)` → HTTP Range, so the `<audio>` element can seek |
 | Failure | fetch error → card still renders, audio area shows "الصوت غير متاح" and a retry button; never block a decision |
 | Source | original MP3 mix, not the separated stem: ~4 MB vs ~25 MB FLAC, and the mix is what a listener recognizes |
 
-Disk: 54 × ~5 MB ≈ 300 MB. Colab has room; nothing is uploaded back.
+Disk: 54 × ~5 MB ≈ 300 MB. Nothing is uploaded back.
 
 ---
 
-## 5. Colab hosting (the part that usually breaks)
+## 5. Hosting: a plain local server
 
-Colab gives no inbound port, so:
+The app is an ordinary local Flask server. Publishing it is the IDE's job, not
+the app's.
 
-```python
-# cell 1
-!pip -q install flask
-!wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 \
-      -O /usr/local/bin/cloudflared && chmod +x /usr/local/bin/cloudflared
+```bash
+python scripts/review_app.py \
+    --items work/review/items.jsonl \
+    --db work/review/answers.db \
+    --audio-dir work/review/audio \
+    --port 5000
 ```
 
-```python
-# cell 2 — app in a thread, tunnel in the foreground
-import threading, subprocess, re, time, sys
-threading.Thread(target=app.run, kwargs=dict(host="127.0.0.1", port=5000,
-                                             threaded=True), daemon=True).start()
-time.sleep(2)
-p = subprocess.Popen(["cloudflared", "tunnel", "--url", "http://127.0.0.1:5000"],
-                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-for line in p.stdout:
-    sys.stdout.write(line); sys.stdout.flush()
-    m = re.search(r"https://[-\w]+\.trycloudflare\.com", line)
-    if m: print("\nOPEN:", m.group(0) + "/?k=" + TOKEN, flush=True)
-```
+- binds **`0.0.0.0`** by default, so a forwarded port reaches it;
+- prints `listening on 0.0.0.0:5000` plus the URL to open;
+- `threaded=True` is set: audio Range requests and the UI share one process;
+- `--token` adds `?k=…`; `--no-token` serves open (fine for a private forwarded
+  port). With a token, the first request sets a session cookie, so the rest of
+  the session needs no query string;
+- **vscode.dev / Codespaces / devcontainers**: forward port 5000 in the Ports
+  panel and open the forwarded URL. Every link in the app is relative, so it
+  works under any origin or path prefix;
+- audio is cached as plain files under `--audio-dir`, so reloading the page or
+  restarting the app never re-downloads a track.
 
-- `threaded=True` is mandatory: audio Range requests and the UI share the process.
-- A random `TOKEN` (`secrets.token_urlsafe`) in the query string keeps the URL
-  from being guessable; the tunnel itself is public, so this is hygiene, not security.
-- Fallback if `trycloudflare` is blocked: `google.colab.output.serve_kernel_port_as_window(5000)`
-  (works, but Range/seek is less reliable — accept no-seek for that session).
-- The cell must stay in the foreground; that is fine, the user is reviewing anyway.
+No tunnel, no ngrok, no cloudflared in the supported path. If the app has to run
+somewhere without port forwarding, wrap it externally — the app does not change.
+
 
 ---
 
@@ -155,9 +152,9 @@ for line in p.stdout:
   timestamp. Used to reconstruct history and to prove nothing was overwritten.
 - **GCS mirror after each answer** (cheap, ~1 KB):
   `gs://akbar-december-2024-backup/REVIEW/title_map/v1/answers.jsonl`.
-  On a new Colab session: read the mirror back, merge by `track_id`, continue.
+  On a new machine/session: read the mirror back, merge by `track_id`, continue.
   Single writer, this app only — the same rule as the stem manifest.
-- Re-running the Colab cell is always safe: the app resumes at the first
+- Restarting the server is always safe: the app resumes at the first
   unanswered card, and `?all=1` reopens answered ones.
 
 ---
@@ -232,10 +229,10 @@ one commit, `reviewer` + `reviewed_at` filled). Then readiness is re-run on the
 |---|---|---|
 | 1 | `review_build.py` on the committed index | 54 items, every `gcs_uri` exists (`gcloud storage ls`) |
 | 2 | app locally, 3 hard-coded items | keys, audio seek, notes, undo |
-| 3 | app locally, full 54, **no Colab** | resume after `kill -9`, export CSV parses |
-| 4 | Colab, 5 items | tunnel URL opens, Range works (seek mid-track) |
-| 5 | Colab, kill the cell mid-review, reopen | answers survive; resumes at the right card |
-| 6 | Colab, full 54 | ~30–40 min of review |
+| 3 | full 54 locally | resume after `kill -9`, export CSV parses |
+| 4 | forwarded URL, 5 cards | Range works (seek mid-track) |
+| 5 | kill the server mid-review, restart | answers survive; resumes at the right card |
+| 6 | full 54 | ~30–40 min of review |
 
 Local first is deliberate: debugging a Flask app through a tunnel is the slow
 way, and the audio path is identical either way.
@@ -249,10 +246,10 @@ Effort: build ~2 h (build + app + export), test ~30 min, review ~30–40 min.
 | Risk | Mitigation |
 |---|---|
 | Tunnel blocked or slow | `serve_kernel_port_as_window` fallback; local cache removes WAN from the loop |
-| Colab disconnect mid-review | SQLite + GCS mirror; resume by re-running the cell |
+| Server/editor restart mid-review | SQLite + optional GCS mirror; restart resumes |
 | Audio seek fails through the tunnel | Range enabled; if it still fails, review without seeking |
 | Wrong answer slips through | `/audit` pass + export diff + A1 coverage gate |
-| Copyright | audio in Colab temp disk + private GCS only; nothing committed; `work/` gitignored |
+| Copyright | audio in the local cache dir + private GCS only; nothing committed |
 | Reviewer fatigue | one question, four keys, auto-advance, progress count |
 
 ---
@@ -269,84 +266,40 @@ Effort: build ~2 h (build + app + export), test ~30 min, review ~30–40 min.
 
 ---
 
-## 12. Runbook — exact cells (built and tested locally 2026-10-28)
-
-Local pre-flight (once, on the box that has the lyric clones):
+## 12. Runbook — local server
 
 ```bash
-python scripts/lyrics_review.py --title-map work/lyrics/title_map.csv \
+# 1. build the queue (a fresh clone is enough: committed index, no lyric repo)
+python scripts/review_build.py --out work/review/items.jsonl
+#   → 54 cards {Elissa: 22, Fadl Shaker: 32}; 5 tracks >360 s dropped
+
+# optional: enrich the cards with two-line excerpts, if the lyric clone exists
+python scripts/lyrics_review.py --title-map index/lyrics/title_map.csv \
     --lyrics-root /path/to/arabic-music-lyrics/lyrics --out work/lyrics/review
-python scripts/review_build.py --title-map work/lyrics/title_map.csv \
-    --review-csv work/lyrics/review/ambiguous.csv --out work/review/items.jsonl
-# 54 cards, 54/54 gcs_uri verified against the real listing
-gcloud storage cp work/review/items.jsonl \
-    gs://akbar-december-2024-backup/REVIEW/title_map/v1/items.jsonl
-```
+python scripts/review_build.py --out work/review/items.jsonl   # rebuild
 
-Colab, cell 1 — setup and audio access:
+# 2. serve
+python scripts/review_app.py \
+    --items work/review/items.jsonl \
+    --db work/review/answers.db \
+    --audio-dir work/review/audio \
+    --port 5000
 
-```python
-!pip -q install flask
-!wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 \
-      -O /usr/local/bin/cloudflared && chmod +x /usr/local/bin/cloudflared
-from google.colab import auth; auth.authenticate_user()
-!gcloud storage ls gs://akbar-december-2024-backup/DISCOGRAPHY/ELISSA/ | head -2
-```
+# 3. forward port 5000 in the IDE (vscode.dev: Ports → Forward), open the printed URL
 
-If the last line fails, `gcloud auth login` interactively once (the project's
-default auth path) — do not use a service-account key for an attended session.
-
-Colab, cell 2 — fetch the queue, start the app, open the tunnel:
-
-```python
-%cd /content
-!git clone -q https://github.com/akbargherbal/yue2-karaoke-align repo 2>/dev/null || true
-%cd /content/repo
-!mkdir -p work/review
-!gcloud storage cp gs://akbar-december-2024-backup/REVIEW/title_map/v1/items.jsonl \
-     work/review/items.jsonl
-
-import subprocess, re, time, secrets
-TOKEN = secrets.token_urlsafe(9)
-MIRROR = "gs://akbar-december-2024-backup/REVIEW/title_map/v1/answers.jsonl"
-
-app = subprocess.Popen(
-    ["python", "-u", "scripts/review_app.py",
-     "--items", "work/review/items.jsonl",
-     "--db", "work/review/answers.db",
-     "--audio-dir", "work/review/audio",
-     "--token", TOKEN, "--mirror-uri", MIRROR],
-    stdout=open("/content/app.log", "w"), stderr=subprocess.STDOUT)
-time.sleep(3)
-print(subprocess.run(["curl", "-s", "http://127.0.0.1:5000/health"],
-                     capture_output=True, text=True).stdout)
-
-tun = subprocess.Popen(["cloudflared", "tunnel", "--url", "http://127.0.0.1:5000"],
-                       stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-for line in tun.stdout:
-    print(line, end="")
-    m = re.search(r"https://[-\w]+\.trycloudflare\.com", line)
-    if m:
-        print("\n\nOPEN →", f"{m.group(0)}/?k={TOKEN}\n", flush=True)
-```
-
-The cell stays open (the tunnel must keep running). Review happens in the
-browser tab; the Colab cell is not touched again.
-
-Colab, cell 3 — when done:
-
-```python
-!ls -la work/review/answers.db work/review/events.jsonl
-!sqlite3 work/review/answers.db "select decision,count(*) from answers group by 1"
-```
-
-Then download `http://127.0.0.1:5000/export.csv` from the browser tab, or run
-locally:
-
-```bash
+# 4. when done
 python scripts/review_export.py --db work/review/answers.db \
-    --title-map work/lyrics/title_map.csv --out work/review/title_map_v2.csv
+    --title-map index/lyrics/title_map.csv --out work/review/title_map_v2.csv
 ```
+
+Notes:
+
+- `gcloud` must be authenticated in that environment (the same user login the
+  stems used); audio is fetched on demand, then cached under `--audio-dir`.
+- The only state is `answers.db` + `events.jsonl`; both are small and survive a
+  restart. `--mirror-uri gs://…/answers.jsonl` adds an off-box copy per answer.
+- `--no-token` serves open; without it the printed URL carries `?k=…` and sets a
+  cookie for the rest of the session.
 
 ---
 
@@ -355,7 +308,7 @@ python scripts/review_export.py --db work/review/answers.db \
 | Piece | State |
 |---|---|
 | `scripts/lyrics_review.py` (excerpt sheet) | done, 54 rows, candidate excerpts resolved |
-| `scripts/review_build.py` (cards + URI check) | done, 54 cards, 54/54 audio objects verified |
-| `scripts/review_app.py` (Flask) | done, tested locally: token gate, Range 206, answer/redirect, audit edit, export, restart-resume |
+| `scripts/review_build.py` (cards + URI check) | done, 54 cards, 54/54 audio objects verified, runs from the committed index alone |
+| `scripts/review_app.py` (Flask, local server) | done, tested: token gate, Range 206, answer/auto-advance, audit edit, export, restart-resume |
 | `scripts/review_export.py` (v2 + report) | done, flags unanswered, overrides, duplicate sheets |
-| Colab end-to-end | **not yet run** — pending the queue upload to GCS |
+| Browser pass through IDE port forwarding | pending — the reviewer's step |

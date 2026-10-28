@@ -34,6 +34,7 @@ import io
 import json
 import os
 import secrets
+import socket
 import sqlite3
 import subprocess
 import sys
@@ -71,6 +72,22 @@ CREATE TABLE IF NOT EXISTS events (
     payload   TEXT
 );
 """
+
+
+def port_free(host: str, port: int) -> bool:
+    with socket.socket() as sock:
+        try:
+            sock.bind(("" if host == "0.0.0.0" else host, port))
+        except OSError:
+            return False
+    return True
+
+
+def suggest_port(host: str, start: int, span: int = 20) -> int | None:
+    for port in range(start + 1, start + span + 1):
+        if port_free(host, port):
+            return port
+    return None
 
 
 def now() -> str:
@@ -383,7 +400,10 @@ def create_app(items_path: Path, db_path: Path, audio_dir: Path,
             return None
         if session.get("ok"):
             return None
-        if token and request.args.get("k") == token:
+        if not token:
+            session["ok"] = True
+            return None
+        if request.args.get("k") == token:
             session["ok"] = True
             return None
         return Response("forbidden: open the URL printed at startup "
@@ -525,20 +545,32 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--items", default="work/review/items.jsonl")
     ap.add_argument("--db", default="work/review/answers.db")
     ap.add_argument("--audio-dir", default="work/review/audio")
-    ap.add_argument("--token", default=None, help="shared-secret query param")
+    ap.add_argument("--token", default=None,
+                    help="shared-secret query param; omit for an open local server")
+    ap.add_argument("--no-token", action="store_true",
+                    help="serve without the ?k= gate (local/forwarded port only)")
     ap.add_argument("--mirror-uri", default=None,
                     help="gs://…/answers.jsonl mirror, written after each answer")
     ap.add_argument("--reviewer", default="akbar")
-    ap.add_argument("--host", default="127.0.0.1")
+    ap.add_argument("--host", default="0.0.0.0",
+                    help="0.0.0.0 so IDE port forwarding can reach it")
     ap.add_argument("--port", type=int, default=5000)
     args = ap.parse_args(argv)
 
     if not Path(args.items).exists():
         sys.exit(f"{args.items} missing; run scripts/review_build.py first")
-    token = args.token or secrets.token_urlsafe(9)
+    if not port_free(args.host, args.port):
+        alt = suggest_port(args.host, args.port)
+        sys.exit(f"port {args.port} is already in use"
+                 + (f"; try --port {alt}" if alt else ""))
+    token = "" if args.no_token else (args.token or secrets.token_urlsafe(9))
     app = create_app(Path(args.items), Path(args.db), Path(args.audio_dir),
                      token, args.mirror_uri, args.reviewer)
-    print(f"open: http://{args.host}:{args.port}/?k={token}", flush=True)
+    local = f"http://127.0.0.1:{args.port}/"
+    print(f"listening on {args.host}:{args.port}", flush=True)
+    print(f"open: {local}" + (f"?k={token}" if token else ""), flush=True)
+    if args.host == "0.0.0.0":
+        print("forward this port from your IDE (vscode.dev: Ports → Forward)", flush=True)
     app.run(host=args.host, port=args.port, threaded=True, debug=False)
     return 0
 

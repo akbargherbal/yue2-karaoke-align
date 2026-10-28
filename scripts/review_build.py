@@ -74,14 +74,19 @@ def gcs_uri(item: dict, root: str = ROOT,
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--title-map", default="work/lyrics/title_map.csv")
-    ap.add_argument("--review-csv", default="work/lyrics/review/ambiguous.csv")
+    ap.add_argument("--title-map", default="index/lyrics/title_map.csv",
+                    help="committed map by default, so a fresh clone works")
+    ap.add_argument("--review-csv", default="work/lyrics/review/ambiguous.csv",
+                    help="optional excerpt sheet; without it cards show titles only")
     ap.add_argument("--out", default="work/review/items.jsonl")
     ap.add_argument("--status", default="ambiguous",
                     help="title_map decision value to queue")
     ap.add_argument("--root", default=ROOT)
     ap.add_argument("--skip-check", action="store_true",
                     help="do not list GCS (no network)")
+    ap.add_argument("--max-duration", type=float, default=360.0,
+                    help="drop cards longer than this (0 = keep all); matches the "
+                         "214-track stem scope")
     args = ap.parse_args(argv)
 
     with open(args.title_map, encoding="utf-8") as fh:
@@ -90,38 +95,44 @@ def main(argv: list[str] | None = None) -> int:
     if not wanted:
         sys.exit(f"no rows with decision={args.status!r} in {args.title_map}")
 
-    with open(args.review_csv, encoding="utf-8") as fh:
-        excerpts = {r["track_id"]: r for r in csv.DictReader(fh)}
+    excerpts: dict[str, dict] = {}
+    if args.review_csv and Path(args.review_csv).exists():
+        with open(args.review_csv, encoding="utf-8") as fh:
+            excerpts = {r["track_id"]: r for r in csv.DictReader(fh)}
+    else:
+        print(f"note: {args.review_csv} not found; building cards without excerpts",
+              file=sys.stderr)
 
     objects = set() if args.skip_check else gcs_objects(args.root)
     index = index_objects(objects)
 
-    items, missing = [], []
+    items, missing, dropped = [], [], 0
     for track_id, base in wanted.items():
-        row = excerpts.get(track_id)
-        if row is None:
-            sys.exit(f"{track_id} is in the map but not in {args.review_csv}; "
-                     "re-run scripts/lyrics_review.py")
+        duration = float(base.get("duration_s") or 0)
+        if args.max_duration > 0 and duration > args.max_duration:
+            dropped += 1
+            continue
+        row = excerpts.get(track_id) or {}
         uri = gcs_uri(base, args.root, index)
         exists = True if args.skip_check else uri in objects
         if not exists:
             missing.append(uri)
         cands = [{
             "n": 1,
-            "title": row["cand1_title"],
-            "source": row["cand1_source"],
-            "score": float(row["cand1_score"] or 0),
-            "excerpt": row["cand1_excerpt"],
-            "url": row["cand1_url"],
+            "title": row.get("cand1_title") or base.get("candidate_1") or "",
+            "source": row.get("cand1_source") or base.get("candidate_1_source") or "",
+            "score": float(row.get("cand1_score") or base.get("candidate_1_score") or 0),
+            "excerpt": row.get("cand1_excerpt") or "",
+            "url": row.get("cand1_url") or "",
         }]
-        if row.get("cand2_title"):
+        if row.get("cand2_title") or base.get("candidate_2"):
             cands.append({
                 "n": 2,
-                "title": row["cand2_title"],
-                "source": row["cand2_source"],
-                "score": float(row["cand2_score"] or 0),
-                "excerpt": row["cand2_excerpt"],
-                "url": row["cand2_url"],
+                "title": row.get("cand2_title") or base.get("candidate_2") or "",
+                "source": row.get("cand2_source") or "",
+                "score": float(row.get("cand2_score") or base.get("candidate_2_score") or 0),
+                "excerpt": row.get("cand2_excerpt") or "",
+                "url": row.get("cand2_url") or "",
             })
         items.append({
             "track_id": track_id,
@@ -148,6 +159,11 @@ def main(argv: list[str] | None = None) -> int:
     for item in items:
         by_artist[item["artist"]] = by_artist.get(item["artist"], 0) + 1
     print(f"wrote {out}: {len(items)} cards {by_artist}")
+    if dropped:
+        print(f"dropped {dropped} track(s) longer than {args.max_duration:g}s")
+    if not excerpts:
+        print("cards have no excerpt text; the app shows titles, scores and "
+              "source links only (run scripts/lyrics_review.py to enrich)")
     if missing:
         print(f"WARNING: {len(missing)} audio object(s) not found in GCS:",
               file=sys.stderr)
