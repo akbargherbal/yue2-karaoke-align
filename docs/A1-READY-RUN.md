@@ -334,3 +334,46 @@ track and its reason from the report, and the wall time from the `EXIT=` line.
 - Do not push `work/` (ignored; it contains lyric text).
 - Do not expand to the 154 `needs_expansion` tracks before the 10-track batch
   has an honest accept/fail number.
+
+---
+
+## 10. Resume after a disconnect
+
+Colab's disk is the VM, not a mount: a recycled runtime takes `/content` and
+`/tmp` with it. Nothing here is worth backing up except the record, because the
+expensive parts are all caches with a known rebuild cost.
+
+| thing | where | survives? | rebuild |
+|---|---|---|---|
+| repo, index, scripts, docs | GitHub `main` | yes, once pushed | `git pull` |
+| this run's metrics + audit table | `results/a1/ready10-2026-10-28/` | yes, once pushed | — |
+| `/tmp/lyrics` clone | `/tmp` | no | `git clone --depth 1`, ~10 s |
+| wav2vec2 model, 1.2 GB | `~/.cache/huggingface` | no | ~45 s download, once |
+| `work/ready-pack`, 181 MB | `work/` (ignored) | no | `ready_pack --fetch`, 22 s |
+| 10 SRTs + `words.json` | `work/srt/ready10` | no | align, 150 s |
+| gap audit + cue sheets | `work/audit` | no | `scripts/a1_audit.py`, 8 s |
+
+Total rebuild from a cold VM: **~4 minutes**, of which ~45 s is the model.
+
+```bash
+cd /content/yue2-karaoke-align && git pull
+nvidia-smi && python -c "import torch; print(torch.cuda.is_available())"
+test -d /tmp/lyrics || git clone --depth 1 \
+    https://github.com/akbargherbal/arabic-music-lyrics /tmp/lyrics
+mkdir -p work/logs
+python scripts/ready_pack.py --lyrics-root /tmp/lyrics/lyrics --out work/ready-pack --fetch
+python scripts/a1_align_run.py --songs work/ready-pack/pack.json \
+    --data-dir work/ready-pack --skip-separation --no-player \
+    --out work/srt/ready10 --device cuda
+python scripts/a1_audit.py --out work/srt/ready10
+```
+
+Rules that make this work:
+
+- `work/` is never pushed — it holds lyric text. Metrics and the audit table go
+  to `results/`, which is committed; that is the durable record.
+- Run the long steps detached (`setsid nohup ... &`). A closed browser tab does
+  not kill them; only a recycled VM does, so do not idle for long with a batch
+  pending.
+- Commit after every passing step. An uncommitted fix on a dead VM is the only
+  loss that costs thinking rather than compute.

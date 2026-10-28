@@ -1,0 +1,317 @@
+{
+ "run": "a1-ready10",
+ "date": "2026-10-28",
+ "device": "cuda",
+ "gpu": {
+  "name": "Tesla T4",
+  "vram_mib": 15360,
+  "torch": "2.11.0+cu130",
+  "cuda": "13.0"
+ },
+ "model": "akbargherbal/wav2vec2-large-xlsr-53-arabic",
+ "revision": "4ca1c9c6ac85d839eebc530ec85b6a89f697e4e8",
+ "flags": {
+  "songs": "work/ready-pack/pack.json",
+  "data_dir": "work/ready-pack",
+  "skip_separation": true,
+  "no_player": true,
+  "device": "cuda"
+ },
+ "timings": {
+  "stage_s": 21.9,
+  "smoke_s": 54.8,
+  "batch_s": 150.6,
+  "align_sum_s": 100.9,
+  "model_fetch_s": 45.0,
+  "model_bytes": 1288490188
+ },
+ "totals": {
+  "songs": 10,
+  "ok": 10,
+  "failed": 0,
+  "words": 2162,
+  "intro_violations": 0,
+  "warned_songs": 10
+ },
+ "gates": {
+  "words_ratio_min": 1.0,
+  "monotone_all": true,
+  "intro_violation_count": 0,
+  "line_mapping_all": "line"
+ },
+ "coverage_note": "coverage = last_word_end / duration (a0_qa.py), not a confidence score",
+ "known_defect": {
+  "song": "10.Saharni El Shoq.2005 - 13. Ya Hayat El-Roh",
+  "issue": "word 0 anchored 34.9 s before word 1; opening cue 43 s (28.862 -> 71.844)",
+  "evidence": "duplicate on Best Of places the same word at 63.78 s; median word-start diff between copies 0.10 s",
+  "status": "open, fix belongs in the aligner"
+ },
+ "tracks": [
+  {
+   "song": "Elissa - 1998 Baddy Doub - 06. Sho Ma Sar",
+   "ok": true,
+   "n_words_in": 181,
+   "n_words_aligned": 181,
+   "duration_s": 214.49,
+   "align_s": 7.8,
+   "coverage": 0.953,
+   "monotone": true,
+   "intro_violation": false,
+   "line_mapping": "line",
+   "lead_silence_s": 4.0,
+   "cues": 26,
+   "warnings": [
+    "6 gaps > 2.0s (max 27.321s) -- skipped stretches"
+   ],
+   "audit": {
+    "median_db": -23.5,
+    "tail_s": 10.0,
+    "tail_delta_db": -26.0,
+    "gaps_gt2s": 6,
+    "gaps_skipped": 5,
+    "worst_gap_s": 27.321,
+    "worst_gap_delta_db": -22.9
+   }
+  },
+  {
+   "song": "Elissa - 2004 Ahla Donya - 03.Kol Youm Beomre",
+   "ok": true,
+   "n_words_in": 298,
+   "n_words_aligned": 298,
+   "duration_s": 323.32,
+   "align_s": 14.5,
+   "coverage": 0.84,
+   "monotone": true,
+   "intro_violation": false,
+   "line_mapping": "line",
+   "lead_silence_s": 40.0,
+   "cues": 49,
+   "warnings": [
+    "4 gaps > 2.0s (max 20.801s) -- skipped stretches"
+   ],
+   "audit": {
+    "median_db": -19.7,
+    "tail_s": 51.6,
+    "tail_delta_db": -27.5,
+    "gaps_gt2s": 4,
+    "gaps_skipped": 3,
+    "worst_gap_s": 20.801,
+    "worst_gap_delta_db": -10.7
+   }
+  },
+  {
+   "song": "Elissa - 2006 Bastannak - 01.Bastanak",
+   "ok": true,
+   "n_words_in": 201,
+   "n_words_aligned": 201,
+   "duration_s": 236.09,
+   "align_s": 8.9,
+   "coverage": 0.971,
+   "monotone": true,
+   "intro_violation": false,
+   "line_mapping": "line",
+   "lead_silence_s": 37.5,
+   "cues": 41,
+   "warnings": [
+    "4 gaps > 2.0s (max 3.5s) -- skipped stretches"
+   ],
+   "audit": {
+    "median_db": -17.4,
+    "tail_s": 6.9,
+    "tail_delta_db": -36.9,
+    "gaps_gt2s": 4,
+    "gaps_skipped": 4,
+    "worst_gap_s": 3.5,
+    "worst_gap_delta_db": -0.5
+   }
+  },
+  {
+   "song": "06.Sidi Rohi.2003 - 04.Law Faker",
+   "ok": true,
+   "n_words_in": 143,
+   "n_words_aligned": 143,
+   "duration_s": 191.19,
+   "align_s": 6.3,
+   "coverage": 1.0,
+   "monotone": true,
+   "intro_violation": false,
+   "line_mapping": "line",
+   "lead_silence_s": 27.0,
+   "cues": 30,
+   "warnings": [
+    "4 gaps > 2.0s (max 18.841s) -- skipped stretches"
+   ],
+   "audit": {
+    "median_db": -17.1,
+    "tail_s": 0.0,
+    "tail_delta_db": 0.0,
+    "gaps_gt2s": 4,
+    "gaps_skipped": 3,
+    "worst_gap_s": 18.841,
+    "worst_gap_delta_db": -40.1
+   }
+  },
+  {
+   "song": "08.Hafla 2004 - 01.Law Faker",
+   "ok": true,
+   "n_words_in": 143,
+   "n_words_aligned": 143,
+   "duration_s": 202.34,
+   "align_s": 7.0,
+   "coverage": 1.0,
+   "monotone": true,
+   "intro_violation": false,
+   "line_mapping": "line",
+   "lead_silence_s": 18.5,
+   "cues": 30,
+   "warnings": [
+    "3 gaps > 2.0s (max 17.382s) -- skipped stretches",
+    "longest single word spans 19.462s (melisma, or a collapsed phrase)"
+   ],
+   "audit": {
+    "median_db": -20.7,
+    "tail_s": -0.0,
+    "tail_delta_db": 0.0,
+    "gaps_gt2s": 3,
+    "gaps_skipped": 2,
+    "worst_gap_s": 17.382,
+    "worst_gap_delta_db": -15.6
+   }
+  },
+  {
+   "song": "08.Hafla 2004 - 02.Sidi Rohi",
+   "ok": true,
+   "n_words_in": 182,
+   "n_words_aligned": 182,
+   "duration_s": 217.1,
+   "align_s": 8.0,
+   "coverage": 1.0,
+   "monotone": true,
+   "intro_violation": false,
+   "line_mapping": "line",
+   "lead_silence_s": 19.0,
+   "cues": 34,
+   "warnings": [
+    "2 gaps > 2.0s (max 20.843s) -- skipped stretches",
+    "longest single word spans 57.346s (melisma, or a collapsed phrase)"
+   ],
+   "audit": {
+    "median_db": -21.3,
+    "tail_s": -0.0,
+    "tail_delta_db": 0.0,
+    "gaps_gt2s": 2,
+    "gaps_skipped": 1,
+    "worst_gap_s": 20.843,
+    "worst_gap_delta_db": -26.9
+   }
+  },
+  {
+   "song": "10.Saharni El Shoq.2005 - 04.Tadri Lieh",
+   "ok": true,
+   "n_words_in": 250,
+   "n_words_aligned": 250,
+   "duration_s": 263.34,
+   "align_s": 10.9,
+   "coverage": 0.931,
+   "monotone": true,
+   "intro_violation": false,
+   "line_mapping": "line",
+   "lead_silence_s": 19.5,
+   "cues": 39,
+   "warnings": [
+    "3 gaps > 2.0s (max 10.761s) -- skipped stretches",
+    "longest single word spans 8.021s (melisma, or a collapsed phrase)"
+   ],
+   "audit": {
+    "median_db": -19.1,
+    "tail_s": 18.2,
+    "tail_delta_db": -51.1,
+    "gaps_gt2s": 3,
+    "gaps_skipped": 2,
+    "worst_gap_s": 10.761,
+    "worst_gap_delta_db": -15.4
+   }
+  },
+  {
+   "song": "10.Saharni El Shoq.2005 - 13.Ya Hayat El-Roh",
+   "ok": true,
+   "n_words_in": 274,
+   "n_words_aligned": 274,
+   "duration_s": 300.96,
+   "align_s": 13.4,
+   "coverage": 1.0,
+   "monotone": true,
+   "intro_violation": false,
+   "line_mapping": "line",
+   "lead_silence_s": 22.5,
+   "cues": 42,
+   "warnings": [
+    "2 gaps > 2.0s (max 40.802s) -- skipped stretches",
+    "longest single word spans 13.101s (melisma, or a collapsed phrase)"
+   ],
+   "audit": {
+    "median_db": -21.2,
+    "tail_s": 0.0,
+    "tail_delta_db": 0.0,
+    "gaps_gt2s": 2,
+    "gaps_skipped": 0,
+    "worst_gap_s": 40.802,
+    "worst_gap_delta_db": -25.8
+   }
+  },
+  {
+   "song": "15.The Best Of _Al Rawae3_.2010 - 04.Ya Hyat Al Roh",
+   "ok": true,
+   "n_words_in": 274,
+   "n_words_aligned": 274,
+   "duration_s": 301.14,
+   "align_s": 13.3,
+   "coverage": 1.0,
+   "monotone": true,
+   "intro_violation": false,
+   "line_mapping": "line",
+   "lead_silence_s": 23.5,
+   "cues": 42,
+   "warnings": [
+    "1 gaps > 2.0s (max 40.803s) -- skipped stretches",
+    "longest single word spans 13.181s (melisma, or a collapsed phrase)"
+   ],
+   "audit": {
+    "median_db": -21.4,
+    "tail_s": 0.0,
+    "tail_delta_db": 0.0,
+    "gaps_gt2s": 1,
+    "gaps_skipped": 0,
+    "worst_gap_s": 40.803,
+    "worst_gap_delta_db": -23.0
+   }
+  },
+  {
+   "song": "15.The Best Of _Al Rawae3_.2010 - 12.Dehket El Donya",
+   "ok": true,
+   "n_words_in": 216,
+   "n_words_aligned": 216,
+   "duration_s": 257.78,
+   "align_s": 10.8,
+   "coverage": 1.0,
+   "monotone": true,
+   "intro_violation": false,
+   "line_mapping": "line",
+   "lead_silence_s": 26.5,
+   "cues": 49,
+   "warnings": [
+    "2 gaps > 2.0s (max 12.56s) -- skipped stretches",
+    "longest single word spans 16.921s (melisma, or a collapsed phrase)"
+   ],
+   "audit": {
+    "median_db": -18.1,
+    "tail_s": 0.0,
+    "tail_delta_db": 0.0,
+    "gaps_gt2s": 2,
+    "gaps_skipped": 1,
+    "worst_gap_s": 12.56,
+    "worst_gap_delta_db": -26.3
+   }
+  }
+ ]
+}
