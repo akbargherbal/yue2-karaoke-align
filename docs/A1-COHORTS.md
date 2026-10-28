@@ -14,10 +14,14 @@ and `index/lyrics/readiness.csv` (174 matched rows).
 | `missing` (no lyric candidate) | **57** | no | source lyrics; cannot align | human |
 | `ambiguous` (title match unresolved) | **5** | maybe | `title_map.csv` decision | ~15 min human |
 
-Total 236 = 13 + 2 + 159 + 57 + 5. The brief's "214 tracks → 167 matched,
-47 without lyrics" does not reproduce on disk (22 more inventory rows, 7 more
-matched, 10 more missing); that gap is still unexplained and should be settled
-before anyone quotes totals.
+Total 236 = 13 + 2 + 159 + 57 + 5.
+
+**214 vs 236, reconciled.** `index/lyrics/` holds the 236-row superset; the
+brief's 214 is filtered with `--max-duration 360`. The 22 long tracks split
+exactly into the difference: 7 matched (`needs_expansion`), 10 missing, 5
+ambiguous. So 174-7=167 matched, 57-10=47 without lyrics, 5-5=0 ambiguous,
+161-7=154 `needs_expansion`. Quote 236 for "everything in the discography we
+have audio for", 214 for "the batch the stem cache can actually align".
 
 ## Two facts that shrink the work
 

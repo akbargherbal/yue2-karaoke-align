@@ -8,7 +8,7 @@ recycled runtime then costs ~4 minutes of rebuild, not the work.
 
 | step | state |
 |---|---|
-| index v2 (`index/lyrics/`) | on disk: 236 inventory, 174 matched, 57 missing, 5 ambiguous; the brief said 214/167/47 — still unexplained; `docs/A1-COHORTS.md` has the dispositions |
+| index v2 (`index/lyrics/`) | 236 rows on disk. The 214 scope is the same file filtered to `duration_s <= 360`, so nothing was lost: 174-7=**167** matched, 57-10=**47** missing, 5-5=**0** ambiguous, 161-7=**154** expansion. The 22 long tracks are the entire gap (reconciled 2026-10-28, `docs/A1-COHORTS.md`) |
 | stem cache | complete, 214 tracks / 428 FLAC, `status=ok`; never re-separated |
 | staging (`work/ready-pack`) | done, 10 tracks, 181 MB, `EXIT=0` |
 | smoke (1 track) | `EXIT=0`, 181/181 words, 54.8 s |
