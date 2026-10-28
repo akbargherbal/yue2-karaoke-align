@@ -193,7 +193,9 @@ class AudioCache:
     """Fetch-on-demand MP3 cache with per-file locks and background prefetch."""
 
     def __init__(self, directory: Path):
-        self.dir = directory
+        # Absolute: Flask resolves a relative send_file() path against the
+        # application root (scripts/), not the process cwd.
+        self.dir = directory.expanduser().resolve()
         self.dir.mkdir(parents=True, exist_ok=True)
         self._locks: dict[str, threading.Lock] = {}
         self._guard = threading.Lock()
