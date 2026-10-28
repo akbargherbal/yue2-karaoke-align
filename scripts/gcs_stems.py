@@ -226,10 +226,20 @@ def to_flac(src: Path, dst: Path) -> None:
     sf.write(str(dst), data, sr, format="FLAC", subtype="PCM_16")
 
 
+def gcs_glob_escape(uri: str) -> str:
+    """Make a literal GCS object URI safe for gcloud's wildcard parser.
+
+    gcloud storage treats ``[``, ``*`` and ``?`` in object names as glob
+    metacharacters, so a track called ``13.Kermalak [Remix].mp3`` fails to
+    download. Bracket expressions match the literal character.
+    """
+    return uri.replace("[", "[[]").replace("*", "[*]").replace("?", "[?]")
+
+
 def source_fetch(uri: str, dst: Path) -> None:
     dst.parent.mkdir(parents=True, exist_ok=True)
     if is_gcs(uri):
-        run(["gcloud", "storage", "cp", uri, str(dst)])
+        run(["gcloud", "storage", "cp", gcs_glob_escape(uri), str(dst)])
     else:
         shutil.copy2(uri, dst)
 
