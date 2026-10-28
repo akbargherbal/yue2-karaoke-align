@@ -128,9 +128,15 @@ Alignment only: no Demucs, and the audio comes from the stem cache.
 | Box | Per 4-min track | Ten tracks (41.8 min audio) |
 |---|---|---|
 | CPU, 2 vCPU, `torch` 1 thread (this session) | **> 5 min** measured on track 1; ~1.5–3× real-time | **45–90 min**, not the 60–90 s first assumed |
-| GPU (CUDA wheel, model on device) | ~5–15 s | a few minutes including model load |
+| GPU, Tesla T4, `torch` 2.11.0+cu130 — **measured 2026-10-28** | **6.3–14.5 s** align (`align_s`, mean 10.1 s) | **150.6 s wall** (`EXIT=0`), 41.8 min audio in ≈ 16.6× real-time |
 
-The CPU numbers above are measured, not estimated: the smoke had used 4.5 min of
+The GPU row is measured, not estimated: ten tracks in 150.6 s of wall clock,
+of which 100.9 s is `align_s` summed over the tracks; the remaining ~50 s is
+model load from cache + audio decode + report writing. The model itself (1.2 GB)
+is fetched once — the smoke paid ~45 s for that, the batch paid only the load.
+Staging the 181 MB pack took 22 s.
+
+The CPU row is measured, not estimated: the smoke had used 4.5 min of
 CPU time on a 3.6-min track and had not produced timings. The single-thread
 default is the main culprit; `OMP_NUM_THREADS=2` helps but does not close the
 gap.
@@ -144,6 +150,73 @@ gap.
    a fuller sheet, is what the other 150 tracks need.
 3. Do **not** scale to the 150 before the expander exists; aligning a compact
    sheet produces confident-looking wrong cues.
+
+### 6.1 Measured outcome (2026-10-28, Tesla T4)
+
+`work/srt/ready10/summary.json`: **10/10 accepted, 0 failed_qa**, 2162 words,
+0 silent-intro violations, 382 line cues. All ten pass every gate in §4:
+`n_words_aligned / n_words_in` = 1.000, `monotone` true, `intro_violation`
+false, `line_mapping` `line`. SRT sanity: 0 cues out of order, 0 zero-length,
+0 past the audio, 0 empty.
+
+| track | words | coverage | max gap | lead silence |
+|---|---|---|---|---|
+| Elissa — 06. Sho Ma Sar | 181/181 | 0.953 | 27.3 s | 4.0 s |
+| Elissa — 03. Kol Youm Beomre | 298/298 | **0.840** | 20.8 s | 40.0 s |
+| Elissa — 01. Bastanak | 201/201 | 0.971 | 3.5 s | 37.5 s |
+| Fadl — 04. Law Faker (Sidi Rohi) | 143/143 | 1.000 | 18.8 s | 27.0 s |
+| Fadl — 01. Law Faker (Hafla 2004) | 143/143 | 1.000 | 17.4 s | 18.5 s |
+| Fadl — 02. Sidi Rohi (Hafla 2004) | 182/182 | 1.000 | 20.8 s | 19.0 s |
+| Fadl — 04. Tadri Lieh | 250/250 | 0.931 | 10.8 s | 19.5 s |
+| Fadl — 13. Ya Hayat El-Roh | 274/274 | 1.000 | 40.8 s | 22.5 s |
+| Fadl — 04. Ya Hyat Al Roh (Best Of) | 274/274 | 1.000 | 40.8 s | 23.5 s |
+| Fadl — 12. Dehket El Donya | 216/216 | 1.000 | 12.6 s | 26.5 s |
+
+**Coverage is not a confidence score.** `a0_qa.py` defines it as
+`last_word_end / duration`, and it only warns below 0.60, so a lyric sheet that
+stops early would still report `ok: true`. The two low rows above (0.84, 0.93)
+were checked against the cached vocal stem, not guessed: every gap > 2 s and
+each tail window was compared to the track's median vocal level (1 s frames,
+dBFS). The 20.8 s gap on *Kol Youm Beomre* sits **10.7 dB below** the singing
+level and its 51.6 s tail **27.5 dB below** — instrumental intro/outro, not
+missing lyrics. Across the ten there are 31 gaps > 2 s: the 14 gaps of 7 s or
+more are all quiet (**10.7–41.5 dB** below singing, including the two 40.8 s
+Ya Hayat gaps at 25.8 and 23.0 dB down; the 34.8 s one on the Saharni copy is
+the misplaced word below, not a break), and the 14 gaps within 6 dB of singing
+level are all **≤ 3.8 s** — holds and breaths inside a phrase, not skipped
+sections.
+
+Gap sizes are reported, not hidden; none of these gaps rejects a track.
+
+**One real defect survived the gates.** On *13. Ya Hayat El-Roh* (Saharni
+copy) word 0 is anchored at 28.86 s while word 1 starts at 63.96 s, so the
+opening cue runs **43 s** (28.862 → 71.844) and lights up 35 s before the line
+is sung. The same lyric on the Best Of copy — same 301 s duration, same 274
+words — puts that word at 63.78 s and its first cue at 63.784 → 71.905.
+Across the 274 words the median start difference between the two copies is
+**0.10 s** and the max is 34.9 s, i.e. that single word. `monotone` stays true
+because the path jumps once and never goes backwards, and the word count is
+1:1, so every §4 gate passes it. The fix belongs in the aligner (drop or clamp
+a leading word isolated from word 1), not in post-processing — the SRT was left
+as produced.
+
+Line-level cues also span quiet breaks by design: the same file has a 49 s cue
+(137.268 → 186.290) across the 40.8 s instrumental gap. That is granularity,
+not a misalignment.
+
+### 6.2 Still open
+
+- The 3 `needs_cleanup` tracks are unaligned — cleaning the sheet or leaving
+  them out is still a separate decision (§4).
+- `needs_expansion` is untouched; the expander is the next gate, and the
+  honest number to carry into it is 10/10 accepted on compact sheets.
+- The leading-word anchor above is the first concrete aligner bug the
+  post-batch audit caught; until it is fixed, any batch should be screened for
+  first-cue duration (a first cue much longer than its line is the signature).
+- The gap audit rule above is reproducible from `summary.json` + the stem cache;
+  the throwaway script lives in `work/audit/align_audit.py` (not committed,
+  `work/` is ignored). Promote it to `scripts/` if the expansion batch needs the
+  same check.
 
 ---
 
