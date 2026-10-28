@@ -104,7 +104,7 @@ def main(argv: list[str] | None = None) -> int:
     csv_path = out / f"{args.status}.csv"
     md_path = out / f"{args.status}.md"
 
-    cols = ["idx", "artist", "album", "file", "duration_s",
+    cols = ["idx", "track_id", "artist", "album", "file", "duration_s",
             "cand1_title", "cand1_source", "cand1_score", "cand1_excerpt", "cand1_url",
             "cand2_title", "cand2_source", "cand2_score", "cand2_excerpt", "cand2_url",
             "decision", "lyric_title", "lyric_source", "notes"]
@@ -121,6 +121,7 @@ def main(argv: list[str] | None = None) -> int:
         c1, c2 = lookup(row.get("candidate_1", "")), lookup(row.get("candidate_2", ""))
         enriched.append({
             "idx": i,
+            "track_id": row["track_id"],
             "artist": row["artist"],
             "album": row.get("album", ""),
             "file": row.get("file", ""),

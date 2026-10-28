@@ -257,12 +257,105 @@ Effort: build ~2 h (build + app + export), test ~30 min, review ~30–40 min.
 
 ---
 
-## 11. Open decisions (answer before building)
+## 11. Decisions (resolved 2026-10-28)
 
-1. **Audio source** — original MP3 (recommended: small, natural) vs the cached
-   `vocals.flac` (clearer voice, but ~5× larger and the cache layout must be
-   resolved by `sha256`, not by track).
-2. **Arabic-only UI** (recommended) or bilingual labels.
-3. **Answers destination** — local `work/` + GCS mirror (recommended), and
-   `title_map_v2.csv` committed to `index/lyrics/` only after the diff is
-   approved.
+1. **Audio source: original MP3** — ~5 MB per track, natural listening
+   reference, no `sha256` indirection. The separated `vocals.flac` stays for
+   alignment only.
+2. **Arabic-only UI** — RTL, file names stay Latin. Confirmed with the reviewer.
+3. **Answers destination** — local `work/review/` + per-answer mirror to
+   `gs://…/REVIEW/title_map/v1/answers.jsonl`; `title_map_v2.csv` reaches
+   `index/lyrics/` only after the diff is read.
+
+---
+
+## 12. Runbook — exact cells (built and tested locally 2026-10-28)
+
+Local pre-flight (once, on the box that has the lyric clones):
+
+```bash
+python scripts/lyrics_review.py --title-map work/lyrics/title_map.csv \
+    --lyrics-root /path/to/arabic-music-lyrics/lyrics --out work/lyrics/review
+python scripts/review_build.py --title-map work/lyrics/title_map.csv \
+    --review-csv work/lyrics/review/ambiguous.csv --out work/review/items.jsonl
+# 54 cards, 54/54 gcs_uri verified against the real listing
+gcloud storage cp work/review/items.jsonl \
+    gs://akbar-december-2024-backup/REVIEW/title_map/v1/items.jsonl
+```
+
+Colab, cell 1 — setup and audio access:
+
+```python
+!pip -q install flask
+!wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 \
+      -O /usr/local/bin/cloudflared && chmod +x /usr/local/bin/cloudflared
+from google.colab import auth; auth.authenticate_user()
+!gcloud storage ls gs://akbar-december-2024-backup/DISCOGRAPHY/ELISSA/ | head -2
+```
+
+If the last line fails, `gcloud auth login` interactively once (the project's
+default auth path) — do not use a service-account key for an attended session.
+
+Colab, cell 2 — fetch the queue, start the app, open the tunnel:
+
+```python
+%cd /content
+!git clone -q https://github.com/akbargherbal/yue2-karaoke-align repo 2>/dev/null || true
+%cd /content/repo
+!mkdir -p work/review
+!gcloud storage cp gs://akbar-december-2024-backup/REVIEW/title_map/v1/items.jsonl \
+     work/review/items.jsonl
+
+import subprocess, re, time, secrets
+TOKEN = secrets.token_urlsafe(9)
+MIRROR = "gs://akbar-december-2024-backup/REVIEW/title_map/v1/answers.jsonl"
+
+app = subprocess.Popen(
+    ["python", "-u", "scripts/review_app.py",
+     "--items", "work/review/items.jsonl",
+     "--db", "work/review/answers.db",
+     "--audio-dir", "work/review/audio",
+     "--token", TOKEN, "--mirror-uri", MIRROR],
+    stdout=open("/content/app.log", "w"), stderr=subprocess.STDOUT)
+time.sleep(3)
+print(subprocess.run(["curl", "-s", "http://127.0.0.1:5000/health"],
+                     capture_output=True, text=True).stdout)
+
+tun = subprocess.Popen(["cloudflared", "tunnel", "--url", "http://127.0.0.1:5000"],
+                       stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+for line in tun.stdout:
+    print(line, end="")
+    m = re.search(r"https://[-\w]+\.trycloudflare\.com", line)
+    if m:
+        print("\n\nOPEN →", f"{m.group(0)}/?k={TOKEN}\n", flush=True)
+```
+
+The cell stays open (the tunnel must keep running). Review happens in the
+browser tab; the Colab cell is not touched again.
+
+Colab, cell 3 — when done:
+
+```python
+!ls -la work/review/answers.db work/review/events.jsonl
+!sqlite3 work/review/answers.db "select decision,count(*) from answers group by 1"
+```
+
+Then download `http://127.0.0.1:5000/export.csv` from the browser tab, or run
+locally:
+
+```bash
+python scripts/review_export.py --db work/review/answers.db \
+    --title-map work/lyrics/title_map.csv --out work/review/title_map_v2.csv
+```
+
+---
+
+## 13. Implementation status
+
+| Piece | State |
+|---|---|
+| `scripts/lyrics_review.py` (excerpt sheet) | done, 54 rows, candidate excerpts resolved |
+| `scripts/review_build.py` (cards + URI check) | done, 54 cards, 54/54 audio objects verified |
+| `scripts/review_app.py` (Flask) | done, tested locally: token gate, Range 206, answer/redirect, audit edit, export, restart-resume |
+| `scripts/review_export.py` (v2 + report) | done, flags unanswered, overrides, duplicate sheets |
+| Colab end-to-end | **not yet run** — pending the queue upload to GCS |
