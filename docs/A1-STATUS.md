@@ -8,7 +8,7 @@ recycled runtime then costs ~4 minutes of rebuild, not the work.
 
 | step | state |
 |---|---|
-| index v2 (`index/lyrics/`) | on disk: 174 matched rows (161 `needs_expansion`); the brief said 167/154 — still unexplained, 10 `ready` / 3 `needs_cleanup` agree |
+| index v2 (`index/lyrics/`) | on disk: 236 inventory, 174 matched, 57 missing, 5 ambiguous; the brief said 214/167/47 — still unexplained; `docs/A1-COHORTS.md` has the dispositions |
 | stem cache | complete, 214 tracks / 428 FLAC, `status=ok`; never re-separated |
 | staging (`work/ready-pack`) | done, 10 tracks, 181 MB, `EXIT=0` |
 | smoke (1 track) | `EXIT=0`, 181/181 words, 54.8 s |
@@ -44,6 +44,12 @@ test -d /tmp/lyrics || git clone --depth 1 \
 mkdir -p work/logs
 python scripts/ready_pack.py --lyrics-root /tmp/lyrics/lyrics --out work/ready-pack --fetch
 ```
+
+## Remaining cohorts
+
+See `docs/A1-COHORTS.md`: 2 expansion tracks on a proven sheet (align now), 159
+on unproven sheets (triage first, 143 unique sheets), 7 stubs and 57 missing +
+5 ambiguous tracks that need lyrics work, not alignment.
 
 ## Durable vs ephemeral
 
