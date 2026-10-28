@@ -1,0 +1,88 @@
+{
+ "run": "a1-needs_cleanup3",
+ "date": "2026-10-28",
+ "device": "cuda",
+ "model": "akbargherbal/wav2vec2-large-xlsr-53-arabic",
+ "revision": "4ca1c9c6ac85d839eebc530ec85b6a89f697e4e8",
+ "why": "the 3 readiness=needs_cleanup tracks (has_latin_lines, low_wpm)",
+ "verdict": "all 3 accepted; latin lines are dropped by the vocab filter (129 of 171 sheet words survive), low_wpm is tempo, not a broken sheet",
+ "totals": {
+  "songs": 3,
+  "ok": 3,
+  "failed": 0,
+  "words": 387,
+  "intro_violations": 0,
+  "warned_songs": 3
+ },
+ "tracks": [
+  {
+   "song": "06.Sidi Rohi.2003 - 01.Ya Habibi Ta_ala",
+   "ok": true,
+   "n_words_in": 129,
+   "n_words_aligned": 129,
+   "coverage": 1.0,
+   "monotone": true,
+   "intro_violation": false,
+   "line_mapping": "line",
+   "cues": 40,
+   "align_s": 10.8,
+   "warnings": [
+    "2 gaps > 2.0s (max 29.222s) -- skipped stretches",
+    "longest single word spans 8.621s (melisma, or a collapsed phrase)"
+   ],
+   "dropped_leading": null,
+   "audit": {
+    "gaps_gt2s": 2,
+    "gaps_skipped": 1,
+    "worst_gap_s": 29.222,
+    "worst_gap_delta_db": -46.3
+   }
+  },
+  {
+   "song": "08.Hafla 2004 - 06.Ya Habibi Ta_ala",
+   "ok": true,
+   "n_words_in": 129,
+   "n_words_aligned": 129,
+   "coverage": 1.0,
+   "monotone": true,
+   "intro_violation": false,
+   "line_mapping": "line",
+   "cues": 40,
+   "align_s": 18.4,
+   "warnings": [
+    "7 gaps > 2.0s (max 4.041s) -- skipped stretches",
+    "longest single word spans 24.921s (melisma, or a collapsed phrase)"
+   ],
+   "dropped_leading": null,
+   "audit": {
+    "gaps_gt2s": 7,
+    "gaps_skipped": 7,
+    "worst_gap_s": 4.041,
+    "worst_gap_delta_db": 3.1
+   }
+  },
+  {
+   "song": "15.The Best Of _Al Rawae3_.2010 - 15.Ya Habibi Ta_ala",
+   "ok": true,
+   "n_words_in": 129,
+   "n_words_aligned": 129,
+   "coverage": 1.0,
+   "monotone": true,
+   "intro_violation": false,
+   "line_mapping": "line",
+   "cues": 40,
+   "align_s": 11.2,
+   "warnings": [
+    "3 gaps > 2.0s (max 29.201s) -- skipped stretches",
+    "longest single word spans 8.721s (melisma, or a collapsed phrase)"
+   ],
+   "dropped_leading": null,
+   "audit": {
+    "gaps_gt2s": 3,
+    "gaps_skipped": 2,
+    "worst_gap_s": 29.201,
+    "worst_gap_delta_db": -46.6
+   }
+  }
+ ]
+}

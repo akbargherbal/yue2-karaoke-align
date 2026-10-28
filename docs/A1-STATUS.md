@@ -16,25 +16,20 @@ recycled runtime then costs ~4 minutes of rebuild, not the work.
 | gap audit vs vocal stem | done; two low-coverage tracks cleared as instrumental intros/outros |
 | known defect | leading word of `10.Saharni...13. Ya Hayat El-Roh` anchored 34.9 s early → 43 s opening cue |
 | fix for that defect | **done** — `--max-lead-gap` guard; re-run 10/10 ok, other nine bit-identical, opening cue 63.964 → 71.844 |
-| 3 `needs_cleanup` tracks | not aligned |
+| 3 `needs_cleanup` tracks | **done: 3/3 accepted** (129/129 words, coverage 1.0); latin lines are dropped by the vocab filter, low wpm is tempo — nothing to clean for timing |
 | expander / `needs_expansion` | not started, gated |
 
 ## Next action
 
-Align the 3 `needs_cleanup` tracks, so the cleanup decision has data instead of
-a guess:
+Nothing queued that is safe to start without a decision. The two open paths:
 
-```bash
-python scripts/ready_pack.py --lyrics-root /tmp/lyrics/lyrics \
-    --out work/cleanup-pack --fetch --status needs_cleanup
-python scripts/a1_align_run.py --songs work/cleanup-pack/pack.json \
-    --data-dir work/cleanup-pack --skip-separation --no-player \
-    --out work/srt/cleanup3 --device cuda                       # ~1 min
-python scripts/a1_audit.py --out work/srt/cleanup3
-```
+1. **Review the 13 accepted tracks** with a player and a human ear — the only
+   remaining accuracy question is musical, not statistical.
+2. **The expander** for `needs_expansion` — design work, gated: it needs a rule
+   for repeating a compact sheet across a song's structure and a way to prove
+   it did not invent cues. Do not start it as a command.
 
-Flagged `has_latin_lines` + `low_wpm:28–39`; the run tells us whether the sheet
-is broken or just slow.
+13/13 tracks accepted on compact sheets is the number to carry in.
 
 ## Rebuild from a cold VM (~4 min)
 

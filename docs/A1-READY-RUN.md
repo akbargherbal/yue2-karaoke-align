@@ -213,8 +213,10 @@ instrumental gap. That is granularity, not a misalignment.
 
 ### 6.2 Still open
 
-- The 3 `needs_cleanup` tracks are unaligned — cleaning the sheet or leaving
-  them out is still a separate decision (§4).
+- The 3 `needs_cleanup` tracks are aligned: **3/3 accepted** (129/129 words,
+  coverage 1.0, monotone, no intro violation). The latin lines are dropped by
+  the vocab filter (129 of 171 sheet words survive) and the low `wpm` is the
+  song's tempo, so there is nothing to clean for timing. They are admissible.
 - `needs_expansion` is untouched; the expander is the next gate, and the
   honest number to carry into it is 10/10 accepted on compact sheets.
 - The leading-word anchor is fixed (`--max-lead-gap`), but it was caught only
