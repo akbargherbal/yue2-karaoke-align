@@ -153,7 +153,7 @@ gap.
 
 ### 6.1 Measured outcome (2026-10-28, Tesla T4)
 
-`work/srt/ready10/summary.json`: **10/10 accepted, 0 failed_qa**, 2162 words,
+`work/srt/ready10-fix/summary.json`: **10/10 accepted, 0 failed_qa**, 2161 words,
 0 silent-intro violations, 382 line cues. All ten pass every gate in §4:
 `n_words_aligned / n_words_in` = 1.000, `monotone` true, `intro_violation`
 false, `line_mapping` `line`. SRT sanity: 0 cues out of order, 0 zero-length,
@@ -168,7 +168,7 @@ false, `line_mapping` `line`. SRT sanity: 0 cues out of order, 0 zero-length,
 | Fadl — 01. Law Faker (Hafla 2004) | 143/143 | 1.000 | 17.4 s | 18.5 s |
 | Fadl — 02. Sidi Rohi (Hafla 2004) | 182/182 | 1.000 | 20.8 s | 19.0 s |
 | Fadl — 04. Tadri Lieh | 250/250 | 0.931 | 10.8 s | 19.5 s |
-| Fadl — 13. Ya Hayat El-Roh | 274/274 | 1.000 | 40.8 s | 22.5 s |
+| Fadl — 13. Ya Hayat El-Roh | 273/274 | 1.000 | 40.8 s | 22.5 s |
 | Fadl — 04. Ya Hyat Al Roh (Best Of) | 274/274 | 1.000 | 40.8 s | 23.5 s |
 | Fadl — 12. Dehket El Donya | 216/216 | 1.000 | 12.6 s | 26.5 s |
 
@@ -188,21 +188,28 @@ sections.
 
 Gap sizes are reported, not hidden; none of these gaps rejects a track.
 
-**One real defect survived the gates.** On *13. Ya Hayat El-Roh* (Saharni
-copy) word 0 is anchored at 28.86 s while word 1 starts at 63.96 s, so the
-opening cue runs **43 s** (28.862 → 71.844) and lights up 35 s before the line
-is sung. The same lyric on the Best Of copy — same 301 s duration, same 274
-words — puts that word at 63.78 s and its first cue at 63.784 → 71.905.
-Across the 274 words the median start difference between the two copies is
-**0.10 s** and the max is 34.9 s, i.e. that single word. `monotone` stays true
-because the path jumps once and never goes backwards, and the word count is
-1:1, so every §4 gate passes it. The fix belongs in the aligner (drop or clamp
-a leading word isolated from word 1), not in post-processing — the SRT was left
-as produced.
+**One real defect survived the gates — found, then fixed.** On *13. Ya Hayat
+El-Roh* (Saharni copy) word 0 was anchored at 28.86 s while word 1 starts at
+63.96 s, so the opening cue ran **43 s** (28.862 → 71.844) and lit up 35 s before
+the line was sung. The same lyric on the Best Of copy — same 301 s duration,
+same 274 words — puts that word at 63.78 s and its first cue at
+63.784 → 71.905. Across the 274 words the median start difference between the
+two copies is **0.10 s** and the max is 34.9 s, i.e. that single word.
+`monotone` stayed true and the count was 1:1, so every §4 gate passed it.
 
-Line-level cues also span quiet breaks by design: the same file has a 49 s cue
-(137.268 → 186.290) across the 40.8 s instrumental gap. That is granularity,
-not a misalignment.
+Fixed in `scripts/a1_align_run.py` with `--max-lead-gap` (default 10 s): when
+word 0 is anchored more than that before word 1, it is dropped and the drop is
+recorded (`dropped_leading` in `words.json`, a warning in `summary.json`) — the
+line text is untouched because it comes from the sheet, and `src_i` keeps the
+line mapping. Re-run on the ten: `EXIT=0`, 10/10 ok, the guard fired on that
+track only, the opening cue is now **63.964 → 71.844**, and the other nine
+tracks are **bit-identical** (max word-start difference 0.00 s). Word total
+drops 2162 → 2161; the affected track is 273/274 (0.996), still above the 0.95
+gate.
+
+Line-level cues still span quiet breaks by design: *Sho Ma Sar* has a 37 s first
+cue and *13. Ya Hayat* a 49 s cue (137.268 → 186.290) across the 40.8 s
+instrumental gap. That is granularity, not a misalignment.
 
 ### 6.2 Still open
 
@@ -210,9 +217,9 @@ not a misalignment.
   them out is still a separate decision (§4).
 - `needs_expansion` is untouched; the expander is the next gate, and the
   honest number to carry into it is 10/10 accepted on compact sheets.
-- The leading-word anchor above is the first concrete aligner bug the
-  post-batch audit caught; until it is fixed, any batch should be screened for
-  first-cue duration (a first cue much longer than its line is the signature).
+- The leading-word anchor is fixed (`--max-lead-gap`), but it was caught only
+  by the post-batch audit: keep screening first-cue duration in any larger
+  batch, since a first cue much longer than its line is the signature.
 - The gap audit rule above is reproducible from `summary.json` + the stem cache;
   the throwaway script lives in `work/audit/align_audit.py` (not committed,
   `work/` is ignored). Promote it to `scripts/` if the expansion batch needs the

@@ -15,13 +15,14 @@
   "data_dir": "work/ready-pack",
   "skip_separation": true,
   "no_player": true,
-  "device": "cuda"
+  "device": "cuda",
+  "max_lead_gap": 10.0
  },
  "timings": {
   "stage_s": 21.9,
   "smoke_s": 54.8,
-  "batch_s": 150.6,
-  "align_sum_s": 100.9,
+  "batch_v1_s": 150.6,
+  "batch_v2_s": 151.0,
   "model_fetch_s": 45.0,
   "model_bytes": 1288490188
  },
@@ -29,22 +30,31 @@
   "songs": 10,
   "ok": 10,
   "failed": 0,
-  "words": 2162,
+  "words": 2161,
   "intro_violations": 0,
   "warned_songs": 10
  },
  "gates": {
-  "words_ratio_min": 1.0,
+  "words_ratio_min": 0.996,
   "monotone_all": true,
   "intro_violation_count": 0,
   "line_mapping_all": "line"
  },
  "coverage_note": "coverage = last_word_end / duration (a0_qa.py), not a confidence score",
- "known_defect": {
-  "song": "10.Saharni El Shoq.2005 - 13. Ya Hayat El-Roh",
-  "issue": "word 0 anchored 34.9 s before word 1; opening cue 43 s (28.862 -> 71.844)",
-  "evidence": "duplicate on Best Of places the same word at 63.78 s; median word-start diff between copies 0.10 s",
-  "status": "open, fix belongs in the aligner"
+ "leading_word_fix": {
+  "flag": "--max-lead-gap 10 (default)",
+  "rule": "drop word 0 when it is anchored >10 s before word 1 (CTC stray peak); src_i keeps line text intact",
+  "fired_on": "10.Saharni El Shoq.2005 - 13. Ya Hayat El-Roh only",
+  "before": {
+   "first_cue": "28.862 -> 71.844 (43.0 s)",
+   "words": "274/274"
+  },
+  "after": {
+   "first_cue": "63.964 -> 71.844 (7.9 s)",
+   "words": "273/274",
+   "duplicate_copy": "63.784 -> 71.905 on 15.Best Of/04. Ya Hyat Al Roh"
+  },
+  "side_effects": "other 9 tracks bit-identical (max word-start diff 0.00 s); 10/10 still ok"
  },
  "tracks": [
   {
@@ -53,7 +63,7 @@
    "n_words_in": 181,
    "n_words_aligned": 181,
    "duration_s": 214.49,
-   "align_s": 7.8,
+   "align_s": 7.7,
    "coverage": 0.953,
    "monotone": true,
    "intro_violation": false,
@@ -63,6 +73,7 @@
    "warnings": [
     "6 gaps > 2.0s (max 27.321s) -- skipped stretches"
    ],
+   "dropped_leading": null,
    "audit": {
     "median_db": -23.5,
     "tail_s": 10.0,
@@ -79,7 +90,7 @@
    "n_words_in": 298,
    "n_words_aligned": 298,
    "duration_s": 323.32,
-   "align_s": 14.5,
+   "align_s": 14.6,
    "coverage": 0.84,
    "monotone": true,
    "intro_violation": false,
@@ -89,6 +100,7 @@
    "warnings": [
     "4 gaps > 2.0s (max 20.801s) -- skipped stretches"
    ],
+   "dropped_leading": null,
    "audit": {
     "median_db": -19.7,
     "tail_s": 51.6,
@@ -105,7 +117,7 @@
    "n_words_in": 201,
    "n_words_aligned": 201,
    "duration_s": 236.09,
-   "align_s": 8.9,
+   "align_s": 9.1,
    "coverage": 0.971,
    "monotone": true,
    "intro_violation": false,
@@ -115,6 +127,7 @@
    "warnings": [
     "4 gaps > 2.0s (max 3.5s) -- skipped stretches"
    ],
+   "dropped_leading": null,
    "audit": {
     "median_db": -17.4,
     "tail_s": 6.9,
@@ -131,7 +144,7 @@
    "n_words_in": 143,
    "n_words_aligned": 143,
    "duration_s": 191.19,
-   "align_s": 6.3,
+   "align_s": 6.4,
    "coverage": 1.0,
    "monotone": true,
    "intro_violation": false,
@@ -141,6 +154,7 @@
    "warnings": [
     "4 gaps > 2.0s (max 18.841s) -- skipped stretches"
    ],
+   "dropped_leading": null,
    "audit": {
     "median_db": -17.1,
     "tail_s": 0.0,
@@ -157,7 +171,7 @@
    "n_words_in": 143,
    "n_words_aligned": 143,
    "duration_s": 202.34,
-   "align_s": 7.0,
+   "align_s": 7.2,
    "coverage": 1.0,
    "monotone": true,
    "intro_violation": false,
@@ -168,6 +182,7 @@
     "3 gaps > 2.0s (max 17.382s) -- skipped stretches",
     "longest single word spans 19.462s (melisma, or a collapsed phrase)"
    ],
+   "dropped_leading": null,
    "audit": {
     "median_db": -20.7,
     "tail_s": -0.0,
@@ -184,7 +199,7 @@
    "n_words_in": 182,
    "n_words_aligned": 182,
    "duration_s": 217.1,
-   "align_s": 8.0,
+   "align_s": 8.3,
    "coverage": 1.0,
    "monotone": true,
    "intro_violation": false,
@@ -195,6 +210,7 @@
     "2 gaps > 2.0s (max 20.843s) -- skipped stretches",
     "longest single word spans 57.346s (melisma, or a collapsed phrase)"
    ],
+   "dropped_leading": null,
    "audit": {
     "median_db": -21.3,
     "tail_s": -0.0,
@@ -211,7 +227,7 @@
    "n_words_in": 250,
    "n_words_aligned": 250,
    "duration_s": 263.34,
-   "align_s": 10.9,
+   "align_s": 11.1,
    "coverage": 0.931,
    "monotone": true,
    "intro_violation": false,
@@ -222,6 +238,7 @@
     "3 gaps > 2.0s (max 10.761s) -- skipped stretches",
     "longest single word spans 8.021s (melisma, or a collapsed phrase)"
    ],
+   "dropped_leading": null,
    "audit": {
     "median_db": -19.1,
     "tail_s": 18.2,
@@ -236,9 +253,9 @@
    "song": "10.Saharni El Shoq.2005 - 13.Ya Hayat El-Roh",
    "ok": true,
    "n_words_in": 274,
-   "n_words_aligned": 274,
+   "n_words_aligned": 273,
    "duration_s": 300.96,
-   "align_s": 13.4,
+   "align_s": 13.7,
    "coverage": 1.0,
    "monotone": true,
    "intro_violation": false,
@@ -246,14 +263,22 @@
    "lead_silence_s": 22.5,
    "cues": 42,
    "warnings": [
-    "2 gaps > 2.0s (max 40.802s) -- skipped stretches",
-    "longest single word spans 13.101s (melisma, or a collapsed phrase)"
+    "1 gaps > 2.0s (max 40.802s) -- skipped stretches",
+    "longest single word spans 13.101s (melisma, or a collapsed phrase)",
+    "dropped leading word 'يا' anchored 34.8s before word 1"
    ],
+   "dropped_leading": {
+    "word": "يا",
+    "start": 28.862,
+    "end": 29.142,
+    "gap_s": 34.8,
+    "rule": "leading word isolated by > 10s"
+   },
    "audit": {
     "median_db": -21.2,
     "tail_s": 0.0,
     "tail_delta_db": 0.0,
-    "gaps_gt2s": 2,
+    "gaps_gt2s": 1,
     "gaps_skipped": 0,
     "worst_gap_s": 40.802,
     "worst_gap_delta_db": -25.8
@@ -265,7 +290,7 @@
    "n_words_in": 274,
    "n_words_aligned": 274,
    "duration_s": 301.14,
-   "align_s": 13.3,
+   "align_s": 14.1,
    "coverage": 1.0,
    "monotone": true,
    "intro_violation": false,
@@ -276,6 +301,7 @@
     "1 gaps > 2.0s (max 40.803s) -- skipped stretches",
     "longest single word spans 13.181s (melisma, or a collapsed phrase)"
    ],
+   "dropped_leading": null,
    "audit": {
     "median_db": -21.4,
     "tail_s": 0.0,
@@ -292,7 +318,7 @@
    "n_words_in": 216,
    "n_words_aligned": 216,
    "duration_s": 257.78,
-   "align_s": 10.8,
+   "align_s": 11.4,
    "coverage": 1.0,
    "monotone": true,
    "intro_violation": false,
@@ -303,6 +329,7 @@
     "2 gaps > 2.0s (max 12.56s) -- skipped stretches",
     "longest single word spans 16.921s (melisma, or a collapsed phrase)"
    ],
+   "dropped_leading": null,
    "audit": {
     "median_db": -18.1,
     "tail_s": 0.0,

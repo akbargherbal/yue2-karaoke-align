@@ -275,7 +275,7 @@ def load_prompts(song: dict) -> tuple[list[tuple[str, list[str]]], list[str]]:
 
 def align_one(song: dict, proc, model, model_id: str, revision: str | None,
               device: str, stems_root: Path, sep_device: str,
-              skip_separation: bool) -> dict:
+              skip_separation: bool, max_lead_gap: float = 10.0) -> dict:
     per_line, flat = load_prompts(song)
     if not flat:
         raise ValueError(f"no words in {song['caption']}")
@@ -296,8 +296,26 @@ def align_one(song: dict, proc, model, model_id: str, revision: str | None,
                          model_id, song["name"], device)
     elapsed = time.monotonic() - t0
     words = res["words"]
+    # CTC sometimes anchors the first word on a stray peak far ahead of the rest
+    # (a quiet intro, one char matched, then tens of seconds of blanks). The path
+    # stays monotone, so QA cannot see it, but the first subtitle cue would open
+    # tens of seconds early. Drop that word and say so; src_i keeps line mapping.
+    dropped_leading = None
+    if len(words) > 1:
+        lead_gap = words[1]["start"] - words[0]["end"]
+        if max_lead_gap > 0 and lead_gap > max_lead_gap:
+            w0 = words.pop(0)
+            for k, w in enumerate(words):
+                w["i"] = k
+            dropped_leading = {"word": w0["word"], "start": w0["start"],
+                               "end": w0["end"], "gap_s": round(lead_gap, 1),
+                               "rule": f"leading word isolated by > {max_lead_gap:g}s"}
     mapped = assign_lines(words, per_line, flat)
     m, warns = qa(words, res["duration_s"], 2.0)
+    if dropped_leading:
+        warns.append(
+            f"dropped leading word {dropped_leading['word']!r} anchored "
+            f"{dropped_leading['gap_s']}s before word 1")
     lead = lead_silence_s(stem)
     first = words[0]["start"] if words else None
 
@@ -312,7 +330,8 @@ def align_one(song: dict, proc, model, model_id: str, revision: str | None,
         "align_s": round(elapsed, 1),
         "duration_s": res["duration_s"],
         "n_words_in": res["n_words_in"],
-        "n_words_aligned": res["n_words_aligned"],
+        "n_words_aligned": len(words),
+        "dropped_leading": dropped_leading,
         "stripped_diacritics": res.get("stripped_diacritics"),
         "transliteration": res.get("transliteration"),
         "vocab": res["vocab"],
@@ -364,7 +383,7 @@ def write_reports(out: Path, label: str, records: list[dict],
         if r.get("_ok"):
             for key in ("n_words_in", "n_words_aligned", "duration_s", "align_s",
                         "lead_silence_s", "intro_violation", "line_mapping",
-                        "warnings"):
+                        "warnings", "dropped_leading"):
                 item[key] = r.get(key)
             item["coverage"] = r["qa"].get("coverage")
             item["monotone"] = r["qa"].get("monotone_starts")
@@ -498,6 +517,9 @@ def main(argv: list[str] | None = None) -> int:
                     help="assume vocal stems already exist")
     ap.add_argument("--force", action="store_true",
                     help="re-align even when <song>.words.json exists")
+    ap.add_argument("--max-lead-gap", type=float, default=10.0,
+                    help="drop a first word anchored more than this many seconds "
+                         "before word 1 (CTC stray-peak guard; 0 disables)")
     ap.add_argument("--limit", type=int, help="only the first N songs")
     ap.add_argument("--dry-run", action="store_true",
                     help="list the plan; do not load models or write files")
@@ -559,7 +581,7 @@ def main(argv: list[str] | None = None) -> int:
             else:
                 record = align_one(song, proc, model, args.model, revision,
                                    args.device, stems_root, args.sep_device,
-                                   args.skip_separation)
+                                   args.skip_separation, args.max_lead_gap)
             files = write_assets(record, out, s_slug, args.player_audio,
                                  not args.no_player)
             record.update({"_ok": True, "_files": files})

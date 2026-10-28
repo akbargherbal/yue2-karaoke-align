@@ -15,25 +15,26 @@ recycled runtime then costs ~4 minutes of rebuild, not the work.
 | A1 batch, 10 ready tracks | **10/10 accepted, 0 failed_qa**, 150.6 s, `EXIT=0` |
 | gap audit vs vocal stem | done; two low-coverage tracks cleared as instrumental intros/outros |
 | known defect | leading word of `10.Saharni...13. Ya Hayat El-Roh` anchored 34.9 s early → 43 s opening cue |
-| fix for that defect | **not started** ← next action |
+| fix for that defect | **done** — `--max-lead-gap` guard; re-run 10/10 ok, other nine bit-identical, opening cue 63.964 → 71.844 |
 | 3 `needs_cleanup` tracks | not aligned |
 | expander / `needs_expansion` | not started, gated |
 
 ## Next action
 
-Fix the leading-word anchor in `scripts/a1_align_run.py`, re-run the affected
-track, then re-run the ten to prove no regression:
+Align the 3 `needs_cleanup` tracks, so the cleanup decision has data instead of
+a guess:
 
 ```bash
-python scripts/a1_align_run.py --songs work/ready-pack/pack.json \
-    --data-dir work/ready-pack --skip-separation --no-player \
-    --out work/srt/ready10-fix --device cuda          # ~150 s detached
-python scripts/a1_audit.py --out work/srt/ready10-fix  # ~8 s
+python scripts/ready_pack.py --lyrics-root /tmp/lyrics/lyrics \
+    --out work/cleanup-pack --fetch --status needs_cleanup
+python scripts/a1_align_run.py --songs work/cleanup-pack/pack.json \
+    --data-dir work/cleanup-pack --skip-separation --no-player \
+    --out work/srt/cleanup3 --device cuda                       # ~1 min
+python scripts/a1_audit.py --out work/srt/cleanup3
 ```
 
-Acceptance for the fix: first cue of the Saharni copy starts near 63.8 s
-(matching the Best Of copy), the other nine tracks unchanged, 0 first cues
-longer than their line.
+Flagged `has_latin_lines` + `low_wpm:28–39`; the run tells us whether the sheet
+is broken or just slow.
 
 ## Rebuild from a cold VM (~4 min)
 
