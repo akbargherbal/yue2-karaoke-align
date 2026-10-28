@@ -322,7 +322,8 @@ that scope: **118 `match`, 54 `ambiguous`, 42 `missing`**; readiness **9
 
 `title_map.csv` in that snapshot is still **machine-seeded** — `reviewer` and
 `reviewed_at` are empty on every row, so L2 human adjudication has not started.
-Treat the 54 `ambiguous` rows as the review queue.
+Treat the 54 `ambiguous` rows as the review queue; the browser review flow for
+them is specified in [`REVIEW-APP.md`](REVIEW-APP.md).
 
 ---
 
