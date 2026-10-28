@@ -84,7 +84,8 @@ python -c "import torch, demucs, soundfile; print(torch.__version__, torch.cuda.
   open('/content/sa.json','w').write(userdata.get('GCS_SA_JSON'))
 - ثم:
   !gcloud auth activate-service-account --key-file=/content/sa.json
-  !gcloud config set project quiz-app-april-2025
+  # optional: use the project from the key (avoids a hardcoded project)
+  !gcloud config set project $(python -c "import json;print(json.load(open('/content/sa.json'))['project_id'])")
   !gcloud storage ls "gs://akbar-december-2024-backup/DISCOGRAPHY/" | head
 - إذا فشل أي أمر، توقف واطلب مني المفتاح/الصلاحية. لا تكتب على GCS بدونه.
 - احذف /content/sa.json في نهاية الجلسة إن أمكن.

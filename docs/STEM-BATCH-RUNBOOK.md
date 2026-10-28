@@ -114,7 +114,8 @@ os.environ["PATH"] = "/root/google-cloud-sdk/bin:" + os.environ["PATH"]
 
 ```bash
 !gcloud auth activate-service-account --key-file=/content/sa.json
-!gcloud config set project quiz-app-april-2025
+# optional: use the project from the key (avoids a hardcoded project)
+!gcloud config set project $(python -c "import json;print(json.load(open('/content/sa.json'))['project_id'])")
 !gcloud storage ls "gs://akbar-december-2024-backup/DISCOGRAPHY/" | head
 ```
 
