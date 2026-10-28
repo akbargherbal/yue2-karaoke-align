@@ -1,6 +1,6 @@
 # A1 status — resume point
 
-**Updated:** 2026-10-28 ~18:40 UTC on a Colab T4 (ephemeral disk).
+**Updated:** 2026-10-28 ~21:55 UTC on a Colab T4 (ephemeral disk).
 This file is the checkpoint. Update it and push it at the end of every step; a
 recycled runtime then costs ~4 minutes of rebuild, not the work.
 
@@ -17,20 +17,24 @@ recycled runtime then costs ~4 minutes of rebuild, not the work.
 | known defect | leading word of `10.Saharni...13. Ya Hayat El-Roh` anchored 34.9 s early → 43 s opening cue |
 | fix for that defect | **done** — `--max-lead-gap` guard; re-run 10/10 ok, other nine bit-identical, opening cue 63.964 → 71.844 |
 | 3 `needs_cleanup` tracks | **done: 3/3 accepted** (129/129 words, coverage 1.0); latin lines are dropped by the vocab filter, low wpm is tempo — nothing to clean for timing |
-| expander / `needs_expansion` | design draft in `docs/A1-EXPANDER.md`; **not implemented**; triage-first, 161 rows on disk (154 in the brief) |
+| publish (step 4) | **done 2026-10-28** — `SRT/v1/{ready10,cleanup3,exp2}-2026-10-28/` = 31/10/7 objects, `verify: ok` on all three; manifests committed (`f1ded0a`), SRTs no longer only in `work/` |
+| triage (`needs_expansion`), align | **148/148 ok, 0 failed**, `EXIT=0`, 40m33s. 161 rows → 150 stageable; 7 are >360 s and have no stem in the 214 cache, 4 have no sheet for the title; 2 were already aligned in exp2 |
+| triage, durability | checkpointed to `gs://…/SRT/v1/triage-2026-10-28/` (444 objects) while it ran; **no manifest yet** — it goes up after the audit |
+| expander | design draft in `docs/A1-EXPANDER.md`; **not implemented**; triage-first, 161 rows on disk (154 in the brief) |
 
 ## Next action
 
-Nothing queued that is safe to start without a decision. The two open paths:
+Triage is aligning-done; what remains is measurement, not GPU:
 
-1. **Review the 13 accepted tracks** with a player and a human ear — the only
-   remaining accuracy question is musical, not statistical.
-2. **The expander** for `needs_expansion` — draft in `docs/A1-EXPANDER.md`.
-   Its first step is not expansion but **triage**: align the sheet as-is and keep
-   only tracks with loud gaps (missing singing). `wpm < 50` alone over-flags slow
-   full sheets — our 3 `needs_cleanup` tracks are proof at 28–39 wpm.
+1. **Audit the 148** with `scripts/a1_audit.py` (loud-gap seconds per track), then
+   classify **per sheet**, not per track (150 tracks sit on 143 sheets).
+2. **Publish** `work/srt/triage` to `SRT/v1/triage-2026-10-28/` with
+   `srt_publish.py` so the prefix gets its manifest and the checkpoint becomes a
+   complete run.
+3. Only then pick the expansion pilot from the sheets that come out `compact`.
+   The `broken`/`complete` buckets need no text work.
 
-13/13 tracks accepted on compact sheets is the number to carry in.
+Still open, unchanged: the 7 stubs, 5 ambiguous titles, 57 `missing` rows.
 
 ## Rebuild from a cold VM (~4 min)
 
@@ -54,7 +58,9 @@ on unproven sheets (triage first, 143 unique sheets), 7 stubs and 57 missing +
 ## Durable vs ephemeral
 
 - Durable: this repo, `results/a1/ready10-2026-10-28/{run.json,AUDIT.md}`
-  (metrics only), `scripts/a1_audit.py`.
+  (metrics only), `scripts/a1_audit.py`, the three `SRT/v1/…` prefixes
+  (`ready10` 31 objects, `cleanup3` 10, `exp2` 7) and the triage checkpoint
+  `SRT/v1/triage-2026-10-28/` (444 objects, manifest pending).
 - Ephemeral: `work/` (SRTs, cue sheets, pack — lyric text, never pushed),
   `/tmp/lyrics`, the 1.2 GB HF model.
 - Do not push `work/`; do not leave a passing step uncommitted.
