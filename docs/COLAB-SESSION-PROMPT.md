@@ -25,7 +25,7 @@ GPU، وتخزينهما على GCS ككاش دائم، مع checkpoint بعد �
 
 ## الحالة الحالية
 - الريبو: https://github.com/akbargherbal/yue2-karaoke-align.git
-- commit المرجع: 21200c0
+- commit المرجع وقت كتابة البرومبت: 21200c0 (استخدم main لأحدث التوثيق)
 - GCS: gs://akbar-december-2024-backup
   - الصوت: DISCOGRAPHY/ELISSA و DISCOGRAPHY/FADL_SHAKER
   - الكاش: STEMS/htdemucs/v1/  (manifest.jsonl, run.log, errors.log, <sha>/...)
@@ -47,8 +47,13 @@ GPU، وتخزينهما على GCS ككاش دائم، مع checkpoint بعد �
    تبقى على GCS فقط. لا `git add -A`.
 6. سجّل كل شيء: /content/logs/*.out، وwork/stems-gcs/{run,errors}.log. الأخطاء
    تُكتب مع traceback، ولا توقف الدفعة.
-7. لا تبدأ الكتابة على GCS قبل التحقق من المصادقة. إذا لم يوجد secret باسم
-   GCS_SA_JSON، اسألني مرة واحدة ثم توقف.
+7. لا تبدأ الكتابة على GCS قبل التحقق من المصادقة. أنا أعمل `gcloud auth login`
+   قبل الجلسة. تحقق أولاً:
+   gcloud auth list --filter=status:ACTIVE --format="value(account)"
+   gcloud storage ls "gs://akbar-december-2024-backup/DISCOGRAPHY/" | head
+   إذا المصادقة شغالة وظهرت المجلدات، أكمل. إذا لا، اطلب مني تنفيذ
+   `gcloud auth login --no-launch-browser` ثم أعد التحقق. لا تطلب مفتاح
+   service account إلا إذا قلت لك صراحةً.
 8. لا تفترض مدة جلسة كولاب. --max-minutes=0 هو الافتراضي؛ الـcheckpoint لكل
    تراك هو الحماية. لا تحدد 170 أو أي رقم كأنه حد كولاب.
 9. إذا فشل تراك: سجّل الخطأ، أكمل للتراك التالي. لا تعِد المحاولة يدويًا داخل
@@ -64,7 +69,11 @@ GPU، وتخزينهما على GCS ككاش دائم، مع checkpoint بعد �
   python -c "import torch; print(torch.__version__, torch.cuda.is_available())"
 - إذا CUDA غير متاح، توقف واطلب تغيير نوع الـruntime إلى GPU.
 
-### 1) ثبّت gcloud والمكتبات
+### 1) ثبّت gcloud (إذا مو موجود) والمكتبات
+تحقق أولاً:
+command -v gcloud && gcloud --version | head -1
+
+إذا غير موجود:
 !curl -sSL https://sdk.cloud.google.com | bash -s -- --disable-prompts
 
 ثم في Python (حتى تظهر gcloud لكل shell/subprocess لاحق):
@@ -76,23 +85,26 @@ python -c "import torch, demucs, soundfile; print(torch.__version__, torch.cuda.
 إذا pip غيّر torch وفقدنا CUDA، أعد تثبيت نسخة torch المتوافقة مع كولاب قبل
 المتابعة. لا تكمل بـCUDA=False.
 
-### 2) المصادقة (service account)
-- الأفضل: service account بدور Storage Object Admin على البكت، ومفتاحه محفوظ
-  في Colab Secrets باسم GCS_SA_JSON.
-- اكتب المفتاح مؤقتًا:
-  from google.colab import userdata
-  open('/content/sa.json','w').write(userdata.get('GCS_SA_JSON'))
-- ثم:
-  !gcloud auth activate-service-account --key-file=/content/sa.json
-  # optional: use the project from the key (avoids a hardcoded project)
-  !gcloud config set project $(python -c "import json;print(json.load(open('/content/sa.json'))['project_id'])")
+### 2) المصادقة (user login — أنا أسويها قبل الجلسة)
+- تحقق:
+  !gcloud auth list --filter=status:ACTIVE --format="value(account)"
+  !gcloud config get-value project
   !gcloud storage ls "gs://akbar-december-2024-backup/DISCOGRAPHY/" | head
-- إذا فشل أي أمر، توقف واطلب مني المفتاح/الصلاحية. لا تكتب على GCS بدونه.
-- احذف /content/sa.json في نهاية الجلسة إن أمكن.
+- إذا ACTIVE وظهرت المجلدات: تخطَّ هذه الخطوة وتوكل.
+- إذا لا:
+  !gcloud auth login --no-launch-browser
+  هذا يحتاج تدخلي (رابط/كود)؛ اطلبه مني ثم أعد التحقق. لا تكمل قبل نجاح
+  `gcloud storage ls`.
+- إذا المشروع غير مضبوط: اطلب مني project id ثم
+  `!gcloud config set project <PROJECT_ID>`.
+- ملاحظة: المصادقة تعيش في الـVM وتنمسح مع disconnect؛ في جلسة جديدة أعد
+  `gcloud auth login`.
+- Service account (GCS_SA_JSON) **ليس مطلوبًا**؛ نستخدمه فقط لو طلبت جلسة
+  unattended بدون تفاعل.
 
 ### 3) الكود
 !git clone https://github.com/akbargherbal/yue2-karaoke-align.git /content/yue2-karaoke-align
-!cd /content/yue2-karaoke-align && git checkout 21200c0
+!cd /content/yue2-karaoke-align && git log -1 --oneline
 !git clone --depth 1 https://github.com/akbargherbal/music_captioning_oct_2026.git /content/music_captioning_oct_2026
 
 تحقق:
@@ -153,7 +165,8 @@ disown
 
 ### 8) بعد disconnect / نفاد الجلسة
 كولاب ephemeral. في جلسة جديدة:
-1. أعد الخطوات 1 و2 و3 (تثبيت، auth، clone).
+1. أعد الخطوات 1 و2 و3 (تثبيت، auth، clone). المصادقة تنمسح مع الـVM؛
+   أنا أعيد `gcloud auth login` إذا لزم.
 2. أعد بناء inventory إذا lost (نفس الأمر).
 3. شغّل نفس أمر الخطوة 6 حرفيًا؛ سينزّل الـmanifest والـlogs من GCS، يتخطى
    المكتمل، ويعيد الفاشل. لا تحذف شيئًا، ولا تعمل reset.

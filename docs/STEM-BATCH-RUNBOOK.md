@@ -89,21 +89,16 @@ run; it never blocks the rest.
 
 Use a **GPU runtime**. The free/Pro T4 is enough; htdemucs fits in 15 GB.
 
-### 4.1 Authenticate (service account recommended)
+### 4.1 Authenticate
 
-Create a service account with `roles/storage.objectAdmin` on
-`gs://akbar-december-2024-backup/` (or a prefix), download its JSON key, and
-store the key text in **Colab Secrets** as `GCS_SA_JSON`. Do not put the key in
-the repo.
-
-```python
-from google.colab import userdata
-open('/content/sa.json', 'w').write(userdata.get('GCS_SA_JSON'))
-```
+Default path: **user login**. The operator runs `gcloud auth login` in the
+runtime before the session; the agent verifies it and proceeds. Auth lives in
+the VM, so it is lost on disconnect — repeat it on resume.
 
 ```bash
-# install gcloud once per runtime (Colab does not ship it)
-!curl -sSL https://sdk.cloud.google.com | bash -s -- --disable-prompts
+# gcloud is not preinstalled on Colab; skip if already present
+!command -v gcloud >/dev/null || \
+    curl -sSL https://sdk.cloud.google.com | bash -s -- --disable-prompts
 ```
 
 ```python
@@ -113,19 +108,45 @@ os.environ["PATH"] = "/root/google-cloud-sdk/bin:" + os.environ["PATH"]
 ```
 
 ```bash
+!gcloud auth list --filter=status:ACTIVE --format="value(account)"
+!gcloud config get-value project
+!gcloud storage ls "gs://akbar-december-2024-backup/DISCOGRAPHY/" | head
+```
+
+If there is no ACTIVE account, the operator runs:
+
+```bash
+!gcloud auth login --no-launch-browser
+```
+
+That needs a browser/code from the operator; the agent must ask and wait, then
+re-check. Do not write to GCS until `gcloud storage ls` returns the folders.
+If the project is unset, ask for the project id and set it once.
+
+**Service account (optional, for unattended runs).** If the operator prefers a
+key instead of user login: create a service account with
+`roles/storage.objectAdmin` on the bucket, store the key JSON in Colab Secrets
+as `GCS_SA_JSON`, then:
+
+```python
+from google.colab import userdata
+open('/content/sa.json', 'w').write(userdata.get('GCS_SA_JSON'))
+```
+
+```bash
+!chmod 600 /content/sa.json
 !gcloud auth activate-service-account --key-file=/content/sa.json
-# optional: use the project from the key (avoids a hardcoded project)
 !gcloud config set project $(python -c "import json;print(json.load(open('/content/sa.json'))['project_id'])")
 !gcloud storage ls "gs://akbar-december-2024-backup/DISCOGRAPHY/" | head
 ```
 
-If your org forbids service-account keys, use user auth instead
-(`gcloud auth login --no-launch-browser`) and expect to re-auth every runtime.
+Delete the key file at the end of the runtime. Do not put it in the repo.
 
 ### 4.2 Code and dependencies
 
 ```bash
-!git clone https://github.com/<you>/yue2-karaoke-align.git /content/yue2-karaoke-align
+!git clone https://github.com/akbargherbal/yue2-karaoke-align.git /content/yue2-karaoke-align
+!git clone --depth 1 https://github.com/akbargherbal/music_captioning_oct_2026.git /content/music_captioning_oct_2026
 %cd /content/yue2-karaoke-align
 !pip install -q demucs soundfile numpy
 ```
