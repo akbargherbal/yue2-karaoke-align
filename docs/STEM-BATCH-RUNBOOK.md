@@ -2,6 +2,8 @@
 
 Operational plan for the one-time Demucs pass over the **214 Elissa / Fadl
 Shaker songs** (≤ 6 minutes; 22 long live/concert tracks are excluded).
+**Run status: complete on 2026-10-28 — 214/214 `ok`, 0 failed, 0 stale.**
+See the result report: [`STEM-RUN-2026-10-28.md`](STEM-RUN-2026-10-28.md).
 Contract: [`STEM-CACHE.md`](STEM-CACHE.md). This runbook is
 about **not losing work**: per-track failure isolation, a durable checkpoint
 after every track, and a resume procedure that survives a Colab disconnect.
