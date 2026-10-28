@@ -40,6 +40,7 @@ import csv
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -427,7 +428,13 @@ def cmd_separate(args) -> int:
 
         tmp = Path(tempfile.mkdtemp(prefix="stems-", dir=args.tmp_dir))
         try:
-            source = tmp / Path(track["file"]).name
+            # Use a wildcard-free local name: gcloud also rejects a *destination*
+            # containing glob metacharacters (e.g. "13.Kermalak [Remix].mp3").
+            # The cache key is the content hash, so the local name is irrelevant.
+            suffix = Path(track["file"]).suffix
+            if not re.fullmatch(r"\.[A-Za-z0-9]{1,5}", suffix):
+                suffix = ".mp3"
+            source = tmp / f"source{suffix}"
             source_fetch(track.get("gcs_uri") or track.get("source_uri", ""),
                          source)
             source_sha = sha256(source)
