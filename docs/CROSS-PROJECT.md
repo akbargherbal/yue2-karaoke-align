@@ -317,11 +317,11 @@ directory's `README.md` for provenance and the filter command.
 
 Active scope is **214 tracks (≤ 360 s)**, not 236: 22 long live/concert tracks
 are excluded by `--max-duration 360` (already applied to the stem cache). After
-the human review (v2, 2026-10-28) that scope reads: **163 `match`, 0
-`ambiguous`, 51 without lyrics**; readiness **10 `ready`, 3 `needs_cleanup`,
-150 `needs_expansion`**.
+the human review (v2, 2026-10-28) and the four reviewer-supplied URLs that
+scope reads: **167 `match`, 0 `ambiguous`, 47 without lyrics**; readiness **10
+`ready`, 3 `needs_cleanup`, 154 `needs_expansion`**.
 
-The review settled identity, not completeness: matched went **118 → 163** but
+The review settled identity, not completeness: matched went **118 → 167** but
 `ready` only **9 → 10**, because the 45 recovered sheets are compact (median
 **24.5 wpm** against 60–150 sung). **The lyric expander (§5.1), not title
 matching, is now the binding constraint.**

@@ -100,3 +100,34 @@ GPU. Ten tracks: minutes, not hours.
    a fuller sheet, is what the other 150 tracks need.
 3. Do **not** scale to the 150 before the expander exists; aligning a compact
    sheet produces confident-looking wrong cues.
+
+---
+
+## 7. Reviewer-supplied sheets
+
+Four tracks had no candidate in either scrape; the reviewer recorded "the lyrics
+are at this URL" in `notes`. Those are now `index/lyrics/manual_sources.csv` and
+`scripts/manual_lyrics.py` turns them into `work/lyrics/manual/corpus.csv`
+(gitignored — it holds text):
+
+```bash
+python scripts/manual_lyrics.py --fetch --cdp http://127.0.0.1:9222
+```
+
+- Genius answers a normal `requests` call with browser headers; a bare curl gets
+  a JS challenge.
+- wneen is an SPA, so it needs a rendered page: start Chrome with
+  `--remote-debugging-port=9222` and pass `--cdp`. One navigation per URL, then
+  the text is read out of `#lyricsText`.
+- `ready_pack.py` reads that corpus automatically (`--corpus-csv`), so a staged
+  pack can include these sheets with no extra step.
+
+The same four tracks are all `needs_expansion` even after extraction (9–47 wpm):
+the URLs settled *identity*, not *completeness*.
+
+## 8. Scope caveat when staging
+
+`readiness.csv` in the index is the **236-row** view, so it includes 7 tracks
+longer than 360 s that the stem cache never separated (they are absent from the
+manifest). `ready_pack.py` reports those as `no cached stems in the manifest`
+and skips them; every in-scope expansion track stages.

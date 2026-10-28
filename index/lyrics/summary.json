@@ -1,24 +1,24 @@
 {
   "inventory_tracks": 236,
-  "lyrics_unique_titles": 221,
+  "lyrics_unique_titles": 225,
   "lyrics_by_artist": {
     "Elissa": 137,
-    "Fadl Shaker": 84
+    "Fadl Shaker": 88
   },
   "auto_status": {
-    "match": 125,
-    "ambiguous": 59,
+    "match": 126,
+    "ambiguous": 58,
     "missing": 52
   },
   "status": {
-    "matched": 170,
+    "matched": 174,
     "ambiguous": 5,
-    "missing": 61,
+    "missing": 57,
     "not_applicable": 0
   },
   "readiness": {
-    "needs_expansion": 157,
-    "missing": 61,
+    "needs_expansion": 161,
+    "missing": 57,
     "ready": 10,
     "ambiguous": 5,
     "needs_cleanup": 3

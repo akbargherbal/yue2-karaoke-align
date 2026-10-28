@@ -60,7 +60,7 @@ def gcs_glob_escape(uri: str) -> str:
     return uri.replace("[", "[[]").replace("*", "[*]").replace("?", "[?]")
 
 
-def load_sheets(root: Path) -> dict[tuple[str, str], dict]:
+def load_sheets(root: Path, corpus_csv: Path | None = None) -> dict[tuple[str, str], dict]:
     """(source, normalized title) -> sheet."""
     sheets: dict[tuple[str, str], dict] = {}
     for source in ("fnanen", "kalimataghani"):
@@ -74,6 +74,18 @@ def load_sheets(root: Path) -> dict[tuple[str, str], dict]:
                     "title": title,
                     "text": song.get("lyrics") or "",
                     "url": song.get("url") or "",
+                }
+    # Reviewer-supplied sheets (scripts/manual_lyrics.py) live in a corpus CSV,
+    # not in the scrape tree; the index labels them corpus:<source>.
+    if corpus_csv and corpus_csv.is_file():
+        with open(corpus_csv, encoding="utf-8") as fh:
+            for row in csv.DictReader(fh):
+                title = (row.get("title") or "").strip()
+                text = (row.get("lyrics") or "").strip()
+                if not title or not text:
+                    continue
+                sheets[(f"corpus:{row.get('source', 'manual')}", norm_title(title))] = {
+                    "title": title, "text": text, "url": row.get("source_url") or "",
                 }
     return sheets
 
@@ -110,6 +122,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--readiness", default="index/lyrics/readiness.csv")
     ap.add_argument("--lyrics-root", required=True)
     ap.add_argument("--out", default="work/ready-pack")
+    ap.add_argument("--corpus-csv", default="work/lyrics/manual/corpus.csv",
+                    help="reviewer-supplied sheets (missing file is fine)")
     ap.add_argument("--manifest", default=DEFAULT_MANIFEST,
                     help="stem manifest URI or local JSONL")
     ap.add_argument("--fetch", action="store_true",
@@ -128,7 +142,7 @@ def main(argv: list[str] | None = None) -> int:
     if not ready:
         sys.exit(f"no tracks with readiness={args.status!r}")
 
-    sheets = load_sheets(Path(args.lyrics_root))
+    sheets = load_sheets(Path(args.lyrics_root), Path(args.corpus_csv))
     manifest = load_manifest(args.manifest)
 
     out = Path(args.out)
@@ -142,12 +156,12 @@ def main(argv: list[str] | None = None) -> int:
             continue
         sheet = sheets.get((track["lyric_source"], norm_title(track["lyric_title"])))
         if sheet is None:
-            problems.append(f"{row['file']}: no sheet for "
+            problems.append(f"{track['file']}: no sheet for "
                             f"{track['lyric_title']!r} ({track['lyric_source']})")
             continue
         lines = [ln for ln in lyric_lines(sheet["text"]) if ARABIC_RE.search(ln)]
         if not lines:
-            problems.append(f"{row['file']}: sheet has no Arabic lines")
+            problems.append(f"{track['file']}: sheet has no Arabic lines")
             continue
 
         entry = manifest.get(track.get("gcs_uri", ""))
@@ -157,7 +171,7 @@ def main(argv: list[str] | None = None) -> int:
                           if r["album"] == track["album"] and r["file"] == track["file"]),
                          None)
         if entry is None:
-            problems.append(f"{row['file']}: no cached stems in the manifest")
+            problems.append(f"{track['file']}: no cached stems in the manifest")
             continue
 
         slug = slug_for(track["album"], track["file"])
@@ -173,7 +187,7 @@ def main(argv: list[str] | None = None) -> int:
             proc = subprocess.run(["gcloud", "storage", "cp", gcs_glob_escape(uri),
                                    str(stem)], capture_output=True, text=True)
             if proc.returncode != 0:
-                problems.append(f"{row['file']}: fetch failed: "
+                problems.append(f"{track['file']}: fetch failed: "
                                 f"{proc.stderr.strip()[:120]}")
                 continue
 
