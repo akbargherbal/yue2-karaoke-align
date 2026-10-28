@@ -316,14 +316,20 @@ L0–L4 outputs are committed under [`index/lyrics/`](../index/lyrics/) because
 directory's `README.md` for provenance and the filter command.
 
 Active scope is **214 tracks (≤ 360 s)**, not 236: 22 long live/concert tracks
-are excluded by `--max-duration 360` (already applied to the stem cache). On
-that scope: **118 `match`, 54 `ambiguous`, 42 `missing`**; readiness **9
-`ready`, 3 `needs_cleanup`, 106 `needs_expansion`**.
+are excluded by `--max-duration 360` (already applied to the stem cache). After
+the human review (v2, 2026-10-28) that scope reads: **163 `match`, 0
+`ambiguous`, 51 without lyrics**; readiness **10 `ready`, 3 `needs_cleanup`,
+150 `needs_expansion`**.
 
-`title_map.csv` in that snapshot is still **machine-seeded** — `reviewer` and
-`reviewed_at` are empty on every row, so L2 human adjudication has not started.
-Treat the 54 `ambiguous` rows as the review queue; the browser review flow for
-them is specified in [`REVIEW-APP.md`](REVIEW-APP.md).
+The review settled identity, not completeness: matched went **118 → 163** but
+`ready` only **9 → 10**, because the 45 recovered sheets are compact (median
+**24.5 wpm** against 60–150 sung). **The lyric expander (§5.1), not title
+matching, is now the binding constraint.**
+
+`title_map.csv` in that snapshot is **v2 (human-adjudicated)**: 54 rows
+reviewed, `reviewer`/`reviewed_at` filled, 45 `match` + 9 `no_match`; the 5
+remaining `ambiguous` rows are long tracks outside the scope. The browser flow
+that produced it is specified in [`REVIEW-APP.md`](REVIEW-APP.md).
 
 ---
 

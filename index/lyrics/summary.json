@@ -11,16 +11,16 @@
     "missing": 52
   },
   "status": {
-    "matched": 125,
-    "ambiguous": 59,
-    "missing": 52,
+    "matched": 170,
+    "ambiguous": 5,
+    "missing": 61,
     "not_applicable": 0
   },
   "readiness": {
-    "needs_expansion": 113,
-    "missing": 52,
-    "ready": 9,
-    "ambiguous": 59,
+    "needs_expansion": 157,
+    "missing": 61,
+    "ready": 10,
+    "ambiguous": 5,
     "needs_cleanup": 3
   },
   "thresholds": {
