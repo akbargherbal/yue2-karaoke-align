@@ -206,31 +206,46 @@ python -c "import torch; print(torch.__version__, torch.cuda.is_available(),
 cd /content/yue2-karaoke-align && git pull
 test -d /tmp/lyrics || git clone --depth 1 \
     https://github.com/akbargherbal/arabic-music-lyrics /tmp/lyrics
+mkdir -p work/logs
 gcloud storage cat gs://akbar-december-2024-backup/STEMS/htdemucs/v1/manifest.jsonl \
     | head -1            # permission check; stop if this errors
-python scripts/ready_pack.py --lyrics-root /tmp/lyrics/lyrics \
-    --out work/ready-pack --fetch
+setsid nohup bash -c 'python scripts/ready_pack.py --lyrics-root /tmp/lyrics/lyrics \
+    --out work/ready-pack --fetch; echo "EXIT=$? $(date -Is)" >> work/logs/ready_pack.log' \
+    > work/logs/ready_pack.log 2>&1 < /dev/null &
+disown; echo $! > work/logs/ready_pack.pid
+tail -f work/logs/ready_pack.log     # Ctrl-C is safe; the job keeps running
 ```
 
-Expected: `staged 10 track(s)`, 0 skipped, ~181 MB. This is a re-download of
-`vocals.flac` (not a re-separation); Demucs is still untouched.
+Staging is a download, not a separation, but it is ~181 MB: detached like
+everything else, so the session stays answerable.
+
+Expected in the log after `EXIT=0`: `staged 10 track(s)`, 0 skipped. This is a
+re-download of `vocals.flac` (not a re-separation); Demucs is still untouched.
 
 ### 9.3 Smoke, then the ten
 
 ```bash
-# smoke: one track, foreground is still too long on CPU but fine on GPU;
-# keep the detached form anyway so the session never blocks
+mkdir -p work/logs
+
+# smoke: one track. On GPU this is seconds; the detached form costs nothing.
 setsid nohup bash -c 'python scripts/a1_align_run.py \
     --songs work/ready-pack/pack.json --data-dir work/ready-pack \
     --skip-separation --no-player --out work/srt/smoke --limit 1 \
     --device cuda; echo "EXIT=$? $(date -Is)" >> work/logs/a1_smoke.log' \
     > work/logs/a1_smoke.log 2>&1 < /dev/null &
 disown; echo $! > work/logs/a1_smoke.pid
+
+# the ten, same flags, own output dir and log
+setsid nohup bash -c 'python scripts/a1_align_run.py \
+    --songs work/ready-pack/pack.json --data-dir work/ready-pack \
+    --skip-separation --no-player --out work/srt/ready10 \
+    --device cuda; echo "EXIT=$? $(date -Is)" >> work/logs/a1_ready10.log' \
+    > work/logs/a1_ready10.log 2>&1 < /dev/null &
+disown; echo $! > work/logs/a1_ready10.pid
 ```
 
-Only after `EXIT=0` in `work/logs/a1_smoke.log`, launch the batch with the same
-flags and `--out work/srt/ready10`. One track failing must not stop the batch;
-`failed_qa` is counted, not deleted.
+Only after `EXIT=0` in `work/logs/a1_smoke.log`, launch the second block. One
+track failing must not stop the batch; `failed_qa` is counted, not deleted.
 
 ### 9.4 Verdict
 
