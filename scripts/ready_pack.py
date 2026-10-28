@@ -129,6 +129,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--fetch", action="store_true",
                     help="download vocals.flac for each track (skips cached)")
     ap.add_argument("--limit", type=int, default=0)
+    ap.add_argument("--only", action="append", metavar="SUBSTR",
+                    help="stage only tracks whose track_id contains SUBSTR "
+                         "(repeatable); use it instead of --limit, which is "
+                         "order-dependent")
     ap.add_argument("--status", default="ready",
                     help="readiness value to stage (default: ready)")
     args = ap.parse_args(argv)
@@ -137,6 +141,10 @@ def main(argv: list[str] | None = None) -> int:
         tracks = {r["track_id"]: r for r in csv.DictReader(fh)}
     with open(args.readiness, encoding="utf-8") as fh:
         ready = [r for r in csv.DictReader(fh) if r["readiness"] == args.status]
+    if args.only:
+        ready = [r for r in ready
+                 if any(sub.lower() in r["track_id"].lower() for sub in args.only)]
+        print(f"--only matched {len(ready)} track(s)", file=sys.stderr)
     if args.limit:
         ready = ready[:args.limit]
     if not ready:
