@@ -12,10 +12,11 @@ yue2-karaoke-align على Google Colab. خذ زمام الأمور، ونفّذ�
 على كل خطوة. اقرأ هذا كاملًا قبل أي أمر.
 
 ## الهدف
-فصل 236 تراك إليسا + فضل شاكر إلى جذرين (vocals + instrumental) مرة واحدة على
-GPU، وتخزينهما على GCS ككاش دائم، مع checkpoint بعد كل تراك، بحيث لا نخسر
-الشغل إذا انقطع كولاب. المخرج النهائي لهذه الجلسة: 236 صفًا في الـmanifest أو
-قائمة واضحة بالتراكات الفاشلة. لا SRT في هذه الجلسة (المرحلة التالية).
+فصل أغاني إليسا + فضل شاكر (≤ 6 دقائق، **214 تراكًا**) إلى جذرين
+(vocals + instrumental) مرة واحدة على GPU، وتخزينهما على GCS ككاش دائم، مع
+checkpoint بعد كل تراك، بحيث لا نخسر الشغل إذا انقطع كولاب. المخرج النهائي
+لهذه الجلسة: 214 صفًا في الـmanifest أو قائمة واضحة بالتراكات الفاشلة.
+لا SRT في هذه الجلسة (المرحلة التالية).
 
 ## اقرأ أولًا
 - docs/STEM-BATCH-RUNBOOK.md  (التشغيل، الفشل، الاستئناف)
@@ -29,7 +30,7 @@ GPU، وتخزينهما على GCS ككاش دائم، مع checkpoint بعد �
 - GCS: gs://akbar-december-2024-backup
   - الصوت: DISCOGRAPHY/ELISSA و DISCOGRAPHY/FADL_SHAKER
   - الكاش: STEMS/htdemucs/v1/  (manifest.jsonl, run.log, errors.log, <sha>/...)
-- inventory المتوقع: 236 تراكًا (96 Elissa + 140 Fadl)
+- inventory المتوقع: 214 تراكًا (95 Elissa + 119 Fadl)؛ 22 تراكًا طويلًا (> 360s) مستثناة
 - الجذران: vocals.flac و instrumental.flac (instrumental = Demucs no_vocals،
   وليس instrumental معقّمًا)
 
@@ -117,8 +118,10 @@ python scripts/gcs_inventory.py \
   --caption-root /content/music_captioning_oct_2026/outputs \
   --out work/lyrics/inventory.csv
 
-يجب أن يطبع: 236 tracks {'Elissa': 96, 'Fadl Shaker': 140}. إذا اختلف العدد،
-توقف واعرض السبب.
+يجب أن يطبع:
+214 tracks {'Elissa': 95, 'Fadl Shaker': 119}
+excluded 22 tracks longer than 360s {'Elissa': 1, 'Fadl Shaker': 21}
+إذا اختلف العدد، توقف واعرض السبب.
 
 ### 5) Benchmark 3 تراكات (في الخلفية)
 mkdir -p /content/logs
@@ -173,7 +176,7 @@ disown
 4. اعرض audit وأكمل.
 
 ### 9) معايير الإنجاز لهذه الجلسة
-- 236 cached ok، أو قائمة واضحة بالتراكات الفاشلة مع سببها.
+- 214 cached ok، أو قائمة واضحة بالتراكات الفاشلة مع سببها.
 - manifest.jsonl + run.log + errors.log على GCS.
 - 3 صفوف عشوائية: vocals.flac و instrumental.flac موجودان، FLAC 44.1k stereo،
   والمدة ±1s من المصدر.

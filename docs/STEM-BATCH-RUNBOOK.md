@@ -285,7 +285,7 @@ stems, manifest and logs are not.
    ```bash
    !python scripts/gcs_stems.py audit --inventory work/lyrics/inventory.csv
    ```
-5. Repeat until `cached ok = 236` (or only known-bad tracks remain).
+5. Repeat until `cached ok = 214` (or only known-bad tracks remain).
 
 No separate "resume mode" is needed; idempotence is the resume mode. If the last
 track was killed mid-separation, it is the only one redone.
@@ -339,8 +339,8 @@ Expected: clean stop message, exit 0, no failed rows.
 ## 9. Acceptance checklist
 
 - [ ] `audit` accounts for every inventory row:
-      `cached + missing + failed + stale = 236`.
-- [ ] `cached ok = 236`, or every remaining row has a logged reason.
+      `cached + missing + failed + stale = 214`.
+- [ ] `cached ok = 214`, or every remaining row has a logged reason.
 - [ ] `manifest.jsonl` line count matches `cached ok` (plus failed rows).
 - [ ] 3 random cached rows: `vocals.flac` and `instrumental.flac` exist, are
       FLAC 44.1 kHz stereo, and have the same duration as the source ±1 s.
