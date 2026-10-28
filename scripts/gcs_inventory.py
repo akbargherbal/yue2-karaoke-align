@@ -14,7 +14,7 @@ Usage
 -----
     python scripts/gcs_inventory.py \\
         --caption-root /path/to/music_captioning_oct_2026/outputs \\
-        --out work/lyrics/inventory.csv
+        --out work/lyrics/inventory.csv --max-duration 360
 
     # then
     python scripts/lyrics_coverage.py --inventory work/lyrics/inventory.csv \\
@@ -84,6 +84,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out", default="work/lyrics/inventory.csv")
     ap.add_argument("--artists", nargs="+", default=sorted(ARTIST_DIRS),
                     metavar="DIR", help="GCS artist directories (default: both)")
+    ap.add_argument("--max-duration", type=float, default=0.0,
+                    metavar="SECONDS",
+                    help="keep tracks with duration_s <= SECONDS "
+                         "(0 = no limit); long live/concert tracks are dropped")
     args = ap.parse_args(argv)
 
     durations = load_durations(Path(args.caption_root))
@@ -110,6 +114,23 @@ def main(argv: list[str] | None = None) -> int:
     if not rows:
         sys.exit("no .mp3 objects found (check --root / --artists)")
 
+    excluded: list[dict] = []
+    if args.max_duration > 0:
+        kept: list[dict] = []
+        for row in rows:
+            duration = row["duration_s"]
+            if duration in ("", None):
+                print(f"keeping {row['track_id']}: no duration to check",
+                      file=sys.stderr)
+                kept.append(row)
+            elif float(duration) <= args.max_duration:
+                kept.append(row)
+            else:
+                excluded.append(row)
+        rows = kept
+        if not rows:
+            sys.exit(f"no tracks <= {args.max_duration:g}s")
+
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     with open(out, "w", newline="", encoding="utf-8") as fh:
@@ -122,6 +143,13 @@ def main(argv: list[str] | None = None) -> int:
         by_artist[row["artist"]] = by_artist.get(row["artist"], 0) + 1
     missing = [r["track_id"] for r in rows if not r["duration_s"]]
     print(f"wrote {out}: {len(rows)} tracks {by_artist}")
+    if excluded:
+        by_artist_excluded: dict[str, int] = {}
+        for row in excluded:
+            by_artist_excluded[row["artist"]] = (
+                by_artist_excluded.get(row["artist"], 0) + 1)
+        print(f"excluded {len(excluded)} tracks longer than "
+              f"{args.max_duration:g}s {by_artist_excluded}")
     if missing:
         print(f"no duration for {len(missing)} track(s): {missing}", file=sys.stderr)
     return 0

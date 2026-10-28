@@ -1,7 +1,8 @@
 # STEM-BATCH-RUNBOOK.md — one GPU pass, resumable, failure-isolated
 
-Operational plan for the one-time Demucs pass over the **236 Elissa / Fadl
-Shaker tracks**. Contract: [`STEM-CACHE.md`](STEM-CACHE.md). This runbook is
+Operational plan for the one-time Demucs pass over the **214 Elissa / Fadl
+Shaker songs** (≤ 6 minutes; 22 long live/concert tracks are excluded).
+Contract: [`STEM-CACHE.md`](STEM-CACHE.md). This runbook is
 about **not losing work**: per-track failure isolation, a durable checkpoint
 after every track, and a resume procedure that survives a Colab disconnect.
 
@@ -164,13 +165,20 @@ print(torch.__version__, torch.cuda.is_available(), torch.cuda.get_device_name(0
 
 ### 4.3 Inventory
 
-The inventory is already built (236 tracks) and can be rebuilt from GCS:
+The inventory is built from GCS. **Scope: songs only, duration ≤ 360 s** —
+long live/concert tracks are excluded (`--max-duration 360`):
 
 ```bash
 !python scripts/gcs_inventory.py \
     --caption-root /content/music_captioning_oct_2026/outputs \
-    --out work/lyrics/inventory.csv
+    --out work/lyrics/inventory.csv --max-duration 360
 ```
+
+Expected output: `214 tracks {'Elissa': 95, 'Fadl Shaker': 119}` and
+`excluded 22 tracks longer than 360s {'Elissa': 1, 'Fadl Shaker': 21}`.
+The unfiltered 236-track list can be kept as
+`work/lyrics/inventory_all_236.csv` for reference; the separation runs only
+read `inventory.csv`.
 
 If the caption clone is not on the runtime, copy `inventory.csv` from Drive or
 regenerate it from the committed caption JSONs. The script only needs
@@ -360,7 +368,8 @@ Expected: clean stop message, exit 0, no failed rows.
 
 ## 11. Cost and time (order of magnitude)
 
-- **Storage:** ~13–15 GB for both stems (236 tracks).
+- **Storage:** ~12–14 GB for both stems (214 songs; the 22 excluded long
+  tracks would have added ~2 GB).
 - **Network:** ~2 GB down (source) + ~10–15 GB up (stems).
 - **GPU:** benchmark first. CPU was 63–66 s separation for a 236 s track; GPU is
   expected to be an order of magnitude faster, but do not extrapolate without
