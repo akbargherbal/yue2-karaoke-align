@@ -435,6 +435,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--artists", nargs="+", metavar="LABEL", default=None,
                     help='inventory artists to keep (default when reading a '
                          'caption tree: Elissa, Fadl Shaker)')
+    ap.add_argument("--max-duration", type=float, default=0.0,
+                    help="keep only tracks whose duration_s <= this many seconds "
+                         "(0 = no limit); matches gcs_inventory.py's scope flag")
     ap.add_argument("--top", type=int, default=3, help="candidates per track")
     ap.add_argument("--auto-threshold", type=float, default=93.0,
                     help="score for an automatic 'match' (still needs review)")
@@ -460,6 +463,27 @@ def main(argv: list[str] | None = None) -> int:
             ap.error(f"artist filter matched nothing; labels seen: {seen}")
     if not inventory:
         ap.error("inventory is empty (check --caption-root / --inventory)")
+    if args.max_duration > 0:
+        kept, excluded = [], []
+        for row in inventory:
+            duration = row.get("duration_s")
+            if duration in ("", None):
+                print(f"[coverage] keeping {row['track_id']}: no duration to check",
+                      file=sys.stderr)
+                kept.append(row)
+            elif float(duration) <= args.max_duration:
+                kept.append(row)
+            else:
+                excluded.append(row)
+        if not kept:
+            ap.error(f"no tracks <= {args.max_duration:g}s")
+        if excluded:
+            by_artist: dict[str, int] = {}
+            for row in excluded:
+                by_artist[row["artist"]] = by_artist.get(row["artist"], 0) + 1
+            print(f"[coverage] excluded {len(excluded)} tracks longer than "
+                  f"{args.max_duration:g}s {by_artist}", file=sys.stderr)
+        inventory = kept
     lyrics = load_lyrics(Path(args.lyrics_root))
     if args.corpus_csv:
         lyrics += load_corpus_csv(args.corpus_csv)

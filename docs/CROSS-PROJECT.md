@@ -46,8 +46,8 @@ studies, subtitle generation, and evaluation anchors for future aligners.
 
 ### 0.1 Output contract
 
-The deliverable for this plan is **one `.srt` per track, for as many of the 236
-Elissa/Fadl tracks as the lyrics allow**. Nothing else is the headline.
+The deliverable for this plan is **one `.srt` per track, for as many of the 214
+in-scope Elissa/Fadl tracks (≤ 360 s) as the lyrics allow**. Nothing else is the headline.
 
 ```
 work/srt/<artist>/<album>/<track>.srt      accepted, line-level
@@ -307,6 +307,23 @@ Rules:
 - never “fix” a title by rewriting the lyric text — record the mapping instead;
 - freeze the map before alignment; changes require a new map version.
 
+### 5.3 Committed index (v1, machine-seeded)
+
+L0–L4 outputs are committed under [`index/lyrics/`](../index/lyrics/) because
+`work/` is gitignored and the tables are costly to rebuild: `inventory.csv`,
+`lyrics_index.csv`, `title_map.csv`, `coverage.csv`, `readiness.csv`,
+`summary.json` (236-track superset; no lyric text, titles only). See that
+directory's `README.md` for provenance and the filter command.
+
+Active scope is **214 tracks (≤ 360 s)**, not 236: 22 long live/concert tracks
+are excluded by `--max-duration 360` (already applied to the stem cache). On
+that scope: **118 `match`, 54 `ambiguous`, 42 `missing`**; readiness **9
+`ready`, 3 `needs_cleanup`, 106 `needs_expansion`**.
+
+`title_map.csv` in that snapshot is still **machine-seeded** — `reviewer` and
+`reviewed_at` are empty on every row, so L2 human adjudication has not started.
+Treat the 54 `ambiguous` rows as the review queue.
+
 ---
 
 ## 6. Coverage plan (L0–L6)
@@ -319,7 +336,9 @@ is not coverage.
 ### 6.0 Scope: Elissa and Fadl Shaker only
 
 This plan is deliberately narrow: **236 audio tracks (230 captioned), 236 ABC
-tracks, two artists.** No arabmaqamrock tracks, no YuE2 prompts, no new scraping outside
+tracks, two artists**, of which **214 (≤ 360 s) are in the active SRT scope**
+(the 22 longer live/concert tracks were dropped with the stem-cache pass). No
+arabmaqamrock tracks, no YuE2 prompts, no new scraping outside
 these two artists. The reason is that this pair is the only place where the
 audio inventory, the ABC pass and the lyric scrapes already overlap; expanding
 scope before the title map and readiness gates are proven would multiply the

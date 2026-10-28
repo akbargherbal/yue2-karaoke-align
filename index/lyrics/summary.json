@@ -1,0 +1,31 @@
+{
+  "inventory_tracks": 236,
+  "lyrics_unique_titles": 221,
+  "lyrics_by_artist": {
+    "Elissa": 137,
+    "Fadl Shaker": 84
+  },
+  "auto_status": {
+    "match": 125,
+    "ambiguous": 59,
+    "missing": 52
+  },
+  "status": {
+    "matched": 125,
+    "ambiguous": 59,
+    "missing": 52,
+    "not_applicable": 0
+  },
+  "readiness": {
+    "needs_expansion": 113,
+    "missing": 52,
+    "ready": 9,
+    "ambiguous": 59,
+    "needs_cleanup": 3
+  },
+  "thresholds": {
+    "match": 93.0,
+    "ambiguous": 80.0
+  },
+  "note": "title_map.csv decisions are authoritative; auto status is a candidate."
+}
