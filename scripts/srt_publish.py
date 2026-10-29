@@ -25,6 +25,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import subprocess
 import sys
 import time
@@ -41,6 +42,60 @@ def sha256(path: Path) -> str:
         for chunk in iter(lambda: fh.read(1 << 20), b""):
             h.update(chunk)
     return h.hexdigest()
+
+
+def remote_name(name: str) -> str:
+    """Spaces are legal in GCS keys but hostile in URLs, shells and logs.
+
+    The published runs use `06.Sidi_Rohi.2003_-_11.Sidi_Rohi.srt`, so a run
+    re-published with local names containing spaces would land beside the
+    existing objects instead of over them. Normalize here, once, and record
+    both names in the manifest.
+    """
+    return re.sub(r"\s+", "_", name)
+
+
+def index_slug(album: str, file: str) -> str:
+    """Same shape as ready_pack.slug_for(), with the publish-time normalization."""
+    stem = Path(file).stem
+    slug = re.sub(r"[^\w.\- ]+", "_", f"{album} - {stem}").strip("._ ")
+    return remote_name(re.sub(r"\s+", " ", slug))
+
+
+def track_ids(title_map: str | None) -> dict[str, str]:
+    """remote name (no suffix) -> track_id, built forward from the index."""
+    import csv
+
+    if not title_map:
+        return {}
+    out: dict[str, str] = {}
+    with open(title_map, encoding="utf-8") as fh:
+        for row in csv.DictReader(fh):
+            key = index_slug(row["album"], row["file"])
+            if key in out:
+                print(f"WARN slug collision: {key}", file=sys.stderr)
+                continue
+            out[key] = row["track_id"]
+    return out
+
+
+def remote_hashes(prefix: str) -> dict[str, str]:
+    """uri -> md5 (base64), one call for the whole prefix."""
+    proc = gcloud("hash", f"{prefix}/**")
+    if proc.returncode != 0:
+        return {}
+    out: dict[str, str] = {}
+    md5 = None
+    for line in proc.stdout.splitlines():
+        line = line.strip()
+        if line.startswith("md5_hash:"):
+            md5 = line.split(":", 1)[1].strip()
+        elif line.startswith("url:"):
+            uri = line.split(":", 1)[1].strip()
+            if md5:
+                out[uri] = md5
+            md5 = None
+    return out
 
 
 def collect(directory: Path) -> list[Path]:
@@ -86,37 +141,111 @@ def remote_listing(prefix: str) -> dict[str, int]:
     return out
 
 
+def upload(path: Path, uri: str) -> bool:
+    proc = gcloud("cp", str(path), uri)
+    if proc.returncode != 0:
+        print(f"FAILED {path.name}: {proc.stderr.strip()[:160]}", file=sys.stderr)
+        return False
+    return True
+
+
+def write_manifest(rows: list[dict], destination: Path) -> Path:
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows),
+                           encoding="utf-8")
+    return destination
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--dir", required=True, help="A1 output dir, e.g. work/srt/ready10")
+    ap.add_argument("--dir", help="A1 output dir, e.g. work/srt/ready10")
     ap.add_argument("--run", help="run label used in the prefix (default: dir name)")
     ap.add_argument("--base", default=DEFAULT_BASE, help="gs:// prefix above <run>/")
-    ap.add_argument("--manifest-out", help="also write the manifest here (e.g. results/a1/<run>)")
+    ap.add_argument("--manifest-out",
+                    help="write the manifest here as well (e.g. results/a1/<run>)")
+    ap.add_argument("--backfill", action="store_true",
+                    help="the local run dir is gone: rebuild the manifest from the prefix "
+                         "(md5 from GCS instead of sha256) and upload only that")
+    ap.add_argument("--title-map", default="index/lyrics/title_map.csv",
+                    help="with --backfill: attach track_id to each object")
+    ap.add_argument("--model", help="with --backfill: record the model id")
+    ap.add_argument("--revision", help="with --backfill: record the revision")
+    ap.add_argument("--device", help="with --backfill: record the device")
     ap.add_argument("--dry-run", action="store_true", help="list and hash; upload nothing")
-    ap.add_argument("--verify-only", action="store_true", help="compare remote with local, upload nothing")
+    ap.add_argument("--verify-only", action="store_true",
+                    help="compare remote with local, upload nothing")
     args = ap.parse_args(argv)
 
-    directory = Path(args.dir)
-    if not directory.is_dir():
-        sys.exit(f"{directory} is not a directory")
-    run = args.run or directory.name
+    run = args.run
+    directory: Path | None = None
+    if not args.backfill:
+        if not args.dir:
+            sys.exit("--dir is required unless --backfill")
+        directory = Path(args.dir)
+        if not directory.is_dir():
+            sys.exit(f"{directory} is not a directory")
+        run = run or directory.name
+    if not run:
+        sys.exit("--backfill needs --run (the prefix label)")
+
     prefix = f"{args.base.rstrip('/')}/{run}"
+    print(f"target  {prefix}/")
+
+    # --- backfill: the prefix is the only copy left -------------------------
+    if args.backfill:
+        remote = remote_listing(prefix)
+        remote.pop(f"{prefix}/{MANIFEST}", None)
+        if not remote:
+            sys.exit(f"nothing under {prefix}/")
+        hashes = remote_hashes(prefix)
+        ids = track_ids(args.title_map)
+        rows = []
+        for uri, size in sorted(remote.items()):
+            name = uri.rsplit("/", 1)[1]
+            stem = name[:-len(".words.json")] if name.endswith(".words.json") else name.rsplit(".", 1)[0]
+            row = {"run": run, "name": name, "uri": uri, "bytes": size,
+                   "md5": hashes.get(uri, ""), "backfilled": True}
+            if ids.get(stem):
+                row["track_id"] = ids[stem]
+            for field in ("model", "revision", "device"):
+                value = getattr(args, field)
+                if value:
+                    row[field] = value
+            rows.append(row)
+        known = sum(1 for r in rows if r.get("track_id"))
+        print(f"{run}: {len(rows)} object(s) · track_id on {known} · md5 on "
+              f"{sum(1 for r in rows if r['md5'])}")
+        if args.dry_run:
+            for r in rows[:10]:
+                print(f"  {r['bytes']:>9}  {r.get('track_id', '-')[:44]:44} {r['name']}")
+            print(f"  ... {max(0, len(rows) - 10)} more")
+            return 0
+        out = Path(args.manifest_out or f"results/a1/{run}")
+        manifest = write_manifest(rows, out / MANIFEST)
+        if not upload(manifest, f"{prefix}/{MANIFEST}"):
+            sys.exit("manifest upload failed")
+        remote_after = remote_listing(prefix)
+        ok = all(r["uri"] in remote_after and remote_after[r["uri"]] == r["bytes"] for r in rows)
+        print(f"backfilled manifest for {len(rows)} object(s) -> {prefix}/{MANIFEST}")
+        print("verify:", "ok" if ok else "SIZE MISMATCH")
+        return 0 if ok else 1
+
+    # --- normal publish ----------------------------------------------------
     files = collect(directory)
     if not files:
         sys.exit(f"no {'/'.join(SUFFIXES)} files in {directory}")
-
     prov = run_provenance(directory)
     rows = [{
-        "run": run, "file": p.name, "uri": f"{prefix}/{p.name}",
+        "run": run, "file": p.name, "name": remote_name(p.name),
+        "uri": f"{prefix}/{remote_name(p.name)}",
         "bytes": p.stat().st_size, "sha256": sha256(p), **prov,
     } for p in files]
 
     srt = [r for r in rows if r["file"].endswith(".srt")]
     print(f"{run}: {len(srt)} SRT · {len(rows)} file(s) · {sum(r['bytes'] for r in rows)/1e6:.1f} MB")
-    print(f"target  {prefix}/")
     if args.dry_run or args.verify_only:
         for r in rows:
-            print(f"  {r['bytes']:>9}  {r['sha256'][:12]}  {r['file']}")
+            print(f"  {r['bytes']:>9}  {r['sha256'][:12]}  {r['name']}")
         if args.dry_run:
             return 0
 
@@ -126,34 +255,21 @@ def main(argv: list[str] | None = None) -> int:
         size_bad = [r for r in rows if r["uri"] in remote and remote[r["uri"]] != r["bytes"]]
         print(f"remote: {len(remote)} object(s) under the prefix")
         for r in missing:
-            print(f"  MISSING {r['file']}")
+            print(f"  MISSING {r['name']}")
         for r in size_bad:
-            print(f"  SIZE    {r['file']} local={r['bytes']} remote={remote[r['uri']]}")
+            print(f"  SIZE    {r['name']} local={r['bytes']} remote={remote[r['uri']]}")
         ok = not missing and not size_bad and (f"{prefix}/{MANIFEST}" in remote)
         print("verify:", "ok" if ok else "INCOMPLETE")
         return 0 if ok else 1
 
-    uploaded = 0
-    for r in rows:
-        proc = gcloud("cp", str(directory / r["file"]), r["uri"])
-        if proc.returncode != 0:
-            print(f"FAILED {r['file']}: {proc.stderr.strip()[:160]}", file=sys.stderr)
-            continue
-        uploaded += 1
+    uploaded = sum(1 for r in rows if upload(directory / r["file"], r["uri"]))
     if uploaded != len(rows):
         sys.exit(f"uploaded {uploaded}/{len(rows)}; manifest not written (prefix stays incomplete)")
 
-    manifest = directory / MANIFEST
-    manifest.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows),
-                        encoding="utf-8")
-    proc = gcloud("cp", str(manifest), f"{prefix}/{MANIFEST}")
-    if proc.returncode != 0:
-        sys.exit(f"manifest upload failed: {proc.stderr.strip()[:200]}")
-
-    if args.manifest_out:
-        out = Path(args.manifest_out)
-        out.mkdir(parents=True, exist_ok=True)
-        (out / MANIFEST).write_text(manifest.read_text(encoding="utf-8"), encoding="utf-8")
+    out = Path(args.manifest_out or directory)
+    manifest = write_manifest(rows, out / MANIFEST)
+    if not upload(manifest, f"{prefix}/{MANIFEST}"):
+        sys.exit("manifest upload failed")
 
     remote = remote_listing(prefix)
     ok = all(r["uri"] in remote and remote[r["uri"]] == r["bytes"] for r in rows)
