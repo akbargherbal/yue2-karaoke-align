@@ -19,7 +19,7 @@ recycled runtime then costs ~4 minutes of rebuild, not the work.
 | 3 `needs_cleanup` tracks | **done: 3/3 accepted** (129/129 words, coverage 1.0); latin lines are dropped by the vocab filter, low wpm is tempo — nothing to clean for timing |
 | publish (step 4) | **done 2026-10-28** — `SRT/v1/{ready10,cleanup3,exp2}-2026-10-28/` = 31/10/7 objects, `verify: ok` on all three; manifests committed (`f1ded0a`), SRTs no longer only in `work/` |
 | triage (`needs_expansion`), align | **148/148 ok, 0 failed**, `EXIT=0`, 40m33s. 161 rows → 150 stageable; 7 are >360 s and have no stem in the 214 cache, 4 have no sheet for the title; 2 were already aligned in exp2 |
-| triage, durability | checkpointed to `gs://…/SRT/v1/triage-2026-10-28/` (444 objects) while it ran; **no manifest yet** — it goes up after the audit |
+| triage, durability | `gs://…/SRT/v1/triage-2026-10-28/` — 444 objects, **manifest backfilled 2026-10-29** (444/444 with `track_id` and md5; sha256 is not recoverable once the local dir is gone). Text-side metrics in `results/a1/triage-2026-10-28/STATS.md` |
 | expander | design draft in `docs/A1-EXPANDER.md`; **not implemented**; triage-first, 161 rows on disk (154 in the brief) |
 
 ## Next action
@@ -28,9 +28,8 @@ Triage is aligning-done; what remains is measurement, not GPU:
 
 1. **Audit the 148** with `scripts/a1_audit.py` (loud-gap seconds per track), then
    classify **per sheet**, not per track (150 tracks sit on 143 sheets).
-2. **Publish** `work/srt/triage` to `SRT/v1/triage-2026-10-28/` with
-   `srt_publish.py` so the prefix gets its manifest and the checkpoint becomes a
-   complete run.
+2. **Publish** `work/srt/triage` — done, and the manifest was backfilled from
+   the prefix (`srt_publish.py --backfill`), so the checkpoint is a complete run.
 3. Only then pick the expansion pilot from the sheets that come out `compact`.
    The `broken`/`complete` buckets need no text work.
 
