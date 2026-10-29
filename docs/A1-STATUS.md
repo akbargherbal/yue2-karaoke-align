@@ -21,19 +21,26 @@ recycled runtime then costs ~4 minutes of rebuild, not the work.
 | triage (`needs_expansion`), align | **148/148 ok, 0 failed**, `EXIT=0`, 40m33s. 161 rows → 150 stageable; 7 are >360 s and have no stem in the 214 cache, 4 have no sheet for the title; 2 were already aligned in exp2 |
 | triage, durability | `gs://…/SRT/v1/triage-2026-10-28/` — 444 objects, **manifest backfilled 2026-10-29** (444/444 with `track_id` and md5; sha256 is not recoverable once the local dir is gone). Text-side metrics in `results/a1/triage-2026-10-28/STATS.md` |
 | expander | design draft in `docs/A1-EXPANDER.md`; **not implemented**; triage-first, 161 rows on disk (154 in the brief) |
+| **corpus** | **complete 2026-10-29: 167/167 matched in-scope tracks have SRT + VTT + words.json** (506 objects under `SRT/v1/` across 5 runs). The 4 reviewer-sourced tracks were aligned locally on CPU (`corpus4-2026-10-29`, 4/4 ok) after the corpus CSV was rebuilt. Catalog: `results/corpus/{corpus.jsonl,CORPUS.md}`, verified against GCS (`--check` = 0 missing) |
 
 ## Next action
 
-Triage is aligning-done; what remains is measurement, not GPU:
+The corpus is closed: every matched in-scope track has its SRT, published with a
+manifest, and `python scripts/corpus_index.py --check` exits 0. What is left is
+optional, in descending value:
 
-1. **Audit the 148** with `scripts/a1_audit.py` (loud-gap seconds per track), then
-   classify **per sheet**, not per track (150 tracks sit on 143 sheets).
-2. **Publish** `work/srt/triage` — done, and the manifest was backfilled from
-   the prefix (`srt_publish.py --backfill`), so the checkpoint is a complete run.
-3. Only then pick the expansion pilot from the sheets that come out `compact`.
-   The `broken`/`complete` buckets need no text work.
+1. **Quality, not coverage**: `scripts/a1_audit.py` over the 148 triage tracks
+   (needs the stems; ~3 GB or run where they are) then classify **per sheet**.
+   The 7-track sample showed the 50 s gaps are silent (instrumental), while four
+   tracks carry 7-30 s of loud singing inside gaps — those are the expansion
+   candidates. Text alone cannot separate a mawwal from a dropped verse; that
+   needs a listen.
+2. **Expansion** for the sheets that come out `compact` (`docs/A1-EXPANDER.md`),
+   which is what would move the 148 from "aligned" to "complete".
+3. **Content work, no GPU**: 7 stub sheets, 5 ambiguous titles, 57 `missing` rows.
 
-Still open, unchanged: the 7 stubs, 5 ambiguous titles, 57 `missing` rows.
+Not a defect, by design: the 4 reviewer-sourced tracks are `needs_expansion`
+(9-47 wpm) like the rest, so their SRTs are correct but compact.
 
 ## Rebuild from a cold VM (~4 min)
 
