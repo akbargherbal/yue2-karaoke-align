@@ -507,8 +507,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--lock", default=str(repo / "bench" / "models.lock"),
                     help="pinned revisions JSON")
     ap.add_argument("--device", default="cuda" if _has_cuda() else "cpu")
-    ap.add_argument("--sep-device", default="cpu",
-                    help="Demucs device (cpu is fine; the run is I/O light)")
+    ap.add_argument("--sep-device", default="cuda" if _has_cuda() else "cpu",
+                    help="Demucs device (defaults to cuda when available)")
     ap.add_argument("--stems-dir", default="work/stems")
     ap.add_argument("--player-audio", choices=("mix", "stem"), default="mix",
                     help="audio the karaoke page plays (timings hold for both)")
