@@ -137,13 +137,16 @@ fi
 # (uv's resolver ignores system-site-packages and would re-download torch);
 # uv is only the fast path for isolated venvs, and it creates them without
 # pip, so seed pip first.
+# INSTALLER records which flavor PIP is: uv and pip disagree on the
+# reinstall flag (uv --reinstall, pip --force-reinstall).
 if grep -q 'include-system-site-packages = true' "$VENV/pyvenv.cfg" 2>/dev/null; then
-  PIP=("$PY" -m pip install)
+  PIP=("$PY" -m pip install); INSTALLER=pip
 elif command -v uv >/dev/null 2>&1; then
+  INSTALLER=uv
   PIP=(uv pip install --python "$PY")
   "$PY" -m pip --version >/dev/null 2>&1 || uv pip install --python "$PY" -q pip
 else
-  PIP=("$PY" -m pip install)
+  PIP=("$PY" -m pip install); INSTALLER=pip
 fi
 
 echo "== torch =="
@@ -156,13 +159,17 @@ case "$FLAVOR" in
   cpu)  TORCH_ARGS=(torch torchaudio --index-url https://download.pytorch.org/whl/cpu) ;;
   cuda) TORCH_ARGS=(torch torchaudio) ;;
 esac
+case "$INSTALLER" in
+  uv)  REINSTALL=(--reinstall) ;;          # uv: forces a reinstall even if satisfied
+  pip) REINSTALL=(--force-reinstall) ;;
+esac
 case "$INSTALLED" in
   *+cpu)
     if [ "$FLAVOR" = cpu ]; then
       echo "  already CPU wheels ($INSTALLED)"
     else
       echo "  switching $INSTALLED -> CUDA wheels"
-      "${PIP[@]}" -q --reinstall "${TORCH_ARGS[@]}"
+      "${PIP[@]}" -q "${REINSTALL[@]}" "${TORCH_ARGS[@]}"
     fi
     ;;
   "")
@@ -174,7 +181,7 @@ case "$INSTALLED" in
       echo "  already CUDA wheels ($INSTALLED)"
     else
       echo "  switching $INSTALLED -> CPU wheels"
-      "${PIP[@]}" -q --reinstall "${TORCH_ARGS[@]}"
+      "${PIP[@]}" -q "${REINSTALL[@]}" "${TORCH_ARGS[@]}"
     fi
     ;;
 esac
@@ -185,7 +192,6 @@ if [ "$PLOTS" = 1 ]; then
   echo "  + plotting extras (matplotlib, seaborn, pandas)"
   "${PIP[@]}" -q -r "$REPO_ROOT/scripts/requirements-plots.txt"
 fi
-
 "$PY" - <<'PYCHECK'
 import torch, torchaudio, demucs, transformers, soundfile as sf
 print(f"  [ok] torch {torch.__version__} | torchaudio {torchaudio.__version__}"
@@ -202,6 +208,15 @@ if [ "$FLAVOR" = cuda ] && ! "$PY" -c "import torch; raise SystemExit(0 if torch
   echo "         (driver/CUDA mismatch?); a1_align_run.py would fall back to CPU" >&2
 fi
 
+# The model a1_align_run.py will use by default: the first uncommented id in
+# bench/models.txt (same rule as a1's default_model). --warm/--doctor load
+# THAT model, so a fresh machine pre-downloads the weights the first real run
+# needs, and the vocab check covers the production pipeline — not a0's own
+# DEFAULT_MODEL.
+PROD_MODEL="$(awk 'NF && $1 !~ /^#/ {print $1; exit}' \
+  "$REPO_ROOT/bench/models.txt" 2>/dev/null || true)"
+PROD_MODEL="${PROD_MODEL:-akbargherbal/wav2vec2-large-xlsr-53-arabic}"
+
 if [ "$WARM" = 1 ]; then
   echo "== warming model caches =="
   "$PY" - <<'PYWARM'
@@ -211,12 +226,12 @@ print("  [ok] demucs htdemucs weights")
 PYWARM
   # --check loads the production aligner's tokenizer/weights (pinned via
   # bench/models.lock) and verifies the CTC vocab.
-  "$PY" scripts/a0_align.py --check
+  "$PY" "$REPO_ROOT/scripts/a0_align.py" --check --model "$PROD_MODEL"
 fi
 
 if [ "$DOCTOR" = 1 ]; then
   echo "== doctor =="
-  "$PY" scripts/a0_align.py --check
+  "$PY" "$REPO_ROOT/scripts/a0_align.py" --check --model "$PROD_MODEL"
   "$PY" - <<'PYDOCTOR'
 import torch
 print(f"  torch {torch.__version__} | cuda available: {torch.cuda.is_available()}")
@@ -228,6 +243,7 @@ fi
 echo
 echo "[done] $VENV ready"
 echo "  source $VENV/bin/activate"
+echo "  cd $REPO_ROOT"
 echo "  karaoke:  python scripts/a1_align_run.py --data-dir <DIR> --auto-songs"
 echo "  bench:    python scripts/bench.py --models bench/models.txt --songs bench/songs.json \\"
 echo "              --data-dir <DIR> --out results/bench --sep-device cuda --limit-models 1 --limit-songs 1"
