@@ -151,6 +151,35 @@ prompt-name mismatch before paying for separation.
 Re-running is cheap: existing `.words.json` files are reused and only the
 derived VTT/SRT/player files are regenerated. `--force` re-aligns.
 
+## Keep the section tags in the player (optional)
+
+A1 drops `[Verse 1 | ...]` tags before alignment because they are not sung.
+`scripts/a1_tagged_player.py` re-attaches them afterwards and rewrites **only
+the player**: tags become labelled dividers, and the word highlight stops when
+the vocal stem goes quiet, so a word that the forced path stretched across an
+interlude does not stay lit for 20 s. JSON timings and SRT/VTT are unchanged.
+
+One song:
+
+```bash
+.venv/bin/python scripts/a1_tagged_player.py \
+    --words results/a1/<run>/<song>.words.json \
+    --lyrics prompts/<name>_lyrics.txt
+```
+
+A whole run (matches `<name>_<seed>.words.json` to `prompts/<name>_lyrics.txt`
+the same way A1 does):
+
+```bash
+.venv/bin/python scripts/a1_tagged_player.py \
+    --dir results/a1/<run> --lyrics-dir /path/to/run/prompts
+```
+
+`--no-trim` keeps the aligned word ends as-is; `--annotate` also writes
+`section`/`gap` metadata onto the JSON's `lines`. The trim is display-only and
+needs the cached vocal stem; without it the player is still generated and the
+trim is skipped with a note.
+
 ## Read the report like a sceptic
 
 `A1-REPORT.md` carries the same checks B2 used to eliminate bad models:

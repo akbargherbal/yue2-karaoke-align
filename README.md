@@ -136,6 +136,7 @@ scripts/a0_qa.py             screen timings for aligner failure signatures
 scripts/a0_compare.py        cross-model agreement + energy tracking
 scripts/a0_player.py         self-contained karaoke HTML from word timings
 scripts/a1_align_run.py      batch a run dir → words.json + VTT/SRT + player
+scripts/a1_tagged_player.py  re-render a player with caption section tags kept
 scripts/gcs_inventory.py     GCS discography → inventory.csv (236 Elissa/Fadl tracks)
 scripts/gcs_stems.py         two-stem cache: audit / separate on GPU / fetch for A1
 scripts/lyrics_coverage.py   audio inventory × lyric scrapes → title map + coverage/readiness
