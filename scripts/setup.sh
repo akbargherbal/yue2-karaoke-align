@@ -2,8 +2,9 @@
 # Build the .venv used by the alignment pipeline (scripts/a0_align.py,
 # scripts/a1_align_run.py, scripts/bench.py, ...).
 #
-#   scripts/setup.sh              # CPU wheels (default; fastest to install)
-#   scripts/setup.sh --cuda       # CUDA torch wheels (PyPI default; needs a GPU)
+#   scripts/setup.sh              # auto: CUDA wheels if a GPU is present, else CPU
+#   scripts/setup.sh --cpu        # force CPU wheels
+#   scripts/setup.sh --cuda       # force CUDA torch wheels
 #   scripts/setup.sh --doctor     # build/reuse, then diagnostics
 #   scripts/setup.sh --warm       # pre-download the aligner + demucs weights
 #   scripts/setup.sh --force      # recreate the venv
@@ -12,16 +13,16 @@
 # The code targets torch's stable forced_align API, transformers' CTC models
 # and Demucs 4, so requirements.txt carries lower bounds, not pins (tested with
 # torch 2.14 / torchaudio 2.11 / transformers 5.19 / demucs 4.1.0 on Python
-# 3.12-3.13). CPU is the default because the CUDA wheels are a multi-GB
-# download; on a GPU box (Colab, T4, ...) pass --cuda so demucs and the
-# aligner actually run there. On Colab this reuses the session's
-# preinstalled CUDA torch instead of downloading it again.
+# 3.12-3.13). The torch flavor is auto-detected from the hardware: with an
+# NVIDIA GPU (nvidia-smi) it installs the CUDA wheels so that a1_align_run.py's
+# default `--device/--sep-device cuda` is honoured; without one, the CPU wheels
+# (a much smaller download). --cpu/--cuda override the detection.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VENV="${ALIGN_VENV:-$REPO_ROOT/.venv}"
 PY="$VENV/bin/python"
-FLAVOR="cpu"          # cpu | cuda
+FLAVOR="auto"         # auto | cpu | cuda
 DOCTOR=0
 FORCE=0
 WARM=0
@@ -92,6 +93,18 @@ if ! "$PY" -m pip --version >/dev/null 2>&1 && command -v uv >/dev/null 2>&1; th
 fi
 
 echo "== torch =="
+# Auto-detect the flavor from the hardware: nvidia-smi present and listing a
+# GPU means CUDA wheels; anything else (CI, CPU-only laptop, WSL without the
+# driver) gets the CPU wheels.
+if [ "$FLAVOR" = auto ]; then
+  if command -v nvidia-smi >/dev/null 2>&1 && [ -n "$(nvidia-smi -L 2>/dev/null)" ]; then
+    FLAVOR=cuda
+    echo "  GPU detected via nvidia-smi -> CUDA wheels"
+  else
+    FLAVOR=cpu
+    echo "  no NVIDIA GPU detected -> CPU wheels"
+  fi
+fi
 # Flavor check: a `+cpu` local build already satisfies `torch>=2.2`, so uv/pip
 # would silently keep CPU wheels when switching to --cuda. Compare the local
 # version tag and force a reinstall when the flavor differs.
@@ -141,6 +154,10 @@ else:
 print("  [ok] libsndfile mp3 decode: " +
       ("yes" if sf.check_format("MP3") else "NO — install a libsndfile with mp3 support"))
 PYCHECK
+if [ "$FLAVOR" = cuda ] && ! "$PY" -c "import torch; raise SystemExit(0 if torch.cuda.is_available() else 1)"; then
+  echo "  [warn] CUDA wheels installed but torch.cuda.is_available() is False" >&2
+  echo "         (driver/CUDA mismatch?); a1_align_run.py would fall back to CPU" >&2
+fi
 
 if [ "$WARM" = 1 ]; then
   echo "== warming model caches =="
