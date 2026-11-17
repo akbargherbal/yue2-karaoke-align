@@ -1,0 +1,42 @@
+# Python dependencies for yue2-karaoke-align.
+#
+#   python -m venv .venv
+#   .venv/bin/python -m pip install -r requirements.txt
+#
+# On a CPU-only box, install the CPU wheels of torch/torchaudio first:
+#
+#   .venv/bin/python -m pip install torch torchaudio \
+#       --index-url https://download.pytorch.org/whl/cpu
+#
+# Lower bounds, not pins: the code targets torch's stable
+# torchaudio.functional.forced_align API, transformers' CTC models and Demucs 4.
+# Tested with torch 2.14 / torchaudio 2.11 / transformers 5.19 / demucs 4.1.0.
+
+# --- alignment path (scripts/a0_align.py, a1_align_run.py, bench.py) ---------
+torch>=2.2
+torchaudio>=2.2
+transformers>=4.40
+numpy>=1.24
+
+# Vocal separation: Demucs htdemucs two-stems. Weights (~80 MB) download once.
+demucs>=4.1
+
+# Audio I/O (wav read/write in a0_compare.py, a0_align.py, duel_verdict.py).
+soundfile>=0.12
+
+# --- optional tooling -------------------------------------------------------
+# Phase 0 tokenizer check against the model's own .tiktoken file.
+tiktoken>=0.7
+
+# L2 review app (scripts/review_app.py).
+flask>=3.0
+
+# Lyric-source fetching (scripts/manual_lyrics.py: Genius over websocket).
+requests>=2.31
+websocket-client>=1.7
+
+# Plotting extras live in scripts/requirements-plots.txt (matplotlib, seaborn,
+# pandas) so the alignment path stays light.
+#
+# Not pip-installable: the GCS scripts shell out to the `gcloud` CLI
+# (gcloud storage ls/cp/cat) and require an authenticated account.

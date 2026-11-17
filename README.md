@@ -34,8 +34,10 @@ and the Colab procedure. Licensing is out of scope (personal use).
 
 ## Quick start
 
-Environment: a Python venv with `torch`, `torchaudio`, `transformers`, `demucs`
-and `soundfile`; see [docs/A0-RUNBOOK.md](docs/A0-RUNBOOK.md#prerequisites-once).
+Environment: a Python venv with the deps in
+[`requirements.txt`](requirements.txt) (`torch`, `torchaudio`, `transformers`,
+`demucs`, `soundfile`); see
+[docs/A0-RUNBOOK.md](docs/A0-RUNBOOK.md#prerequisites-once).
 No GPU is required.
 
 ### The one-song recipe (TL;DR)
@@ -114,6 +116,7 @@ Standalone. This repo **consumes** the sibling's rendered audio + prompt lyrics
 ```
 README.md                 this file — verdict + orientation
 PLAN.md                   the phased plan: gates, hardware, artifacts, kill criteria
+requirements.txt          runtime deps (torch/torchaudio/transformers/demucs/...)
 docs/FEASIBILITY.md       the deep assessment (doable vs headache), with evidence
 docs/ROUTE-A.md           post-hoc forced alignment: why it failed once, and the trial that decides it
 docs/A0-RUNBOOK.md        Track A0 protocol: the one-track forced-alignment trial
@@ -137,6 +140,7 @@ scripts/gcs_inventory.py     GCS discography → inventory.csv (236 Elissa/Fadl 
 scripts/gcs_stems.py         two-stem cache: audit / separate on GPU / fetch for A1
 scripts/lyrics_coverage.py   audio inventory × lyric scrapes → title map + coverage/readiness
 scripts/bench.py             the benchmark harness (models x songs)
+scripts/bench_plots.py       benchmark tables/plots (extras: scripts/requirements-plots.txt)
 scripts/colab_setup.sh       one-shot Colab provisioning for the benchmark
 ```
 
