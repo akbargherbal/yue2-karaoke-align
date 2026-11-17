@@ -14,9 +14,11 @@
 # and Demucs 4, so requirements.txt carries lower bounds, not pins (tested with
 # torch 2.14 / torchaudio 2.11 / transformers 5.19 / demucs 4.1.0 on Python
 # 3.12-3.13). The torch flavor is auto-detected from the hardware: with an
-# NVIDIA GPU (nvidia-smi) it installs the CUDA wheels so that a1_align_run.py's
-# default `--device/--sep-device cuda` is honoured; without one, the CPU wheels
-# (a much smaller download). --cpu/--cuda override the detection.
+# NVIDIA GPU (nvidia-smi) it uses CUDA torch so that a1_align_run.py's default
+# `--device/--sep-device cuda` is honoured; without one, CPU torch.
+# --cpu/--cuda override the detection. When the host/session python already
+# ships a torch of the right flavor (Colab does), the venv shares it instead
+# of re-downloading multi-GB wheels.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -48,17 +50,48 @@ done
 echo "== prerequisites =="
 command -v python3 >/dev/null 2>&1 || { echo "[fail] python3 not found" >&2; exit 1; }
 if command -v uv >/dev/null 2>&1; then
-  PIP=(uv pip install --python "$PY")
   echo "  uv:     $(uv --version)"
 else
-  # uv is optional; plain venv+pip works too, just slower.
-  PIP=("$PY" -m pip install)
-  echo "  pip:    $("$PY" -m pip --version 2>/dev/null || echo 'pip (via ensurepip at venv creation)')"
+  echo "  uv:     not installed (falling back to python3 -m venv + pip)"
 fi
 if ! command -v ffmpeg >/dev/null 2>&1; then
   echo "  [warn] ffmpeg not found; fine for the pipeline (soundfile decodes"
   echo "         wav/mp3), but handy for inspecting audio. Debian/Ubuntu:"
   echo "         apt-get install -y ffmpeg"
+fi
+
+echo "== torch flavor =="
+# Auto-detect the flavor from the hardware BEFORE creating the venv, so the
+# venv can decide to share the host torch. nvidia-smi present and listing a
+# GPU means CUDA; anything else (CI, CPU-only laptop, WSL without the driver)
+# gets CPU.
+if [ "$FLAVOR" = auto ]; then
+  if command -v nvidia-smi >/dev/null 2>&1 && [ -n "$(nvidia-smi -L 2>/dev/null)" ]; then
+    FLAVOR=cuda
+    echo "  GPU detected via nvidia-smi -> CUDA torch"
+  else
+    FLAVOR=cpu
+    echo "  no NVIDIA GPU detected -> CPU torch"
+  fi
+fi
+# Probe the host/session python: if it already has a torch of the right flavor
+# (Colab ships one), share it rather than re-downloading torch. Note: uv's
+# resolver ignores system-site-packages, so the shared path must use plain pip.
+SYS_TORCH="$(python3 -c 'import torch; print(torch.__version__)' 2>/dev/null || true)"
+SYS_CUDA="$(python3 -c 'import torch; print(int(torch.cuda.is_available()))' 2>/dev/null || echo 0)"
+REUSE_SYSTEM=0
+if [ -n "$SYS_TORCH" ]; then
+  case "$FLAVOR" in
+    cuda)
+      if [ "$SYS_CUDA" = 1 ]; then REUSE_SYSTEM=1; fi
+      ;;
+    cpu)
+      if [ "$SYS_CUDA" = 0 ]; then REUSE_SYSTEM=1; fi
+      ;;
+  esac
+fi
+if [ "$REUSE_SYSTEM" = 1 ]; then
+  echo "  host torch $SYS_TORCH matches the flavor -> the venv will share it"
 fi
 
 echo "== venv =="
@@ -78,36 +111,46 @@ if [ "$FORCE" = 1 ] && [ -d "$VENV" ]; then
   rm -rf "$VENV"
 fi
 if [ ! -x "$PY" ]; then
-  echo "  creating $VENV"
-  if command -v uv >/dev/null 2>&1; then
-    uv venv "$VENV" --python 3.12
+  if [ "$REUSE_SYSTEM" = 1 ]; then
+    echo "  creating $VENV (sharing the host torch $SYS_TORCH)"
+    # --without-pip: many host pythons (and uv-made venvs) ship without
+    # ensurepip; pip is seeded below instead.
+    python3 -m venv --system-site-packages --without-pip "$VENV"
+    if command -v uv >/dev/null 2>&1; then
+      uv pip install --python "$PY" -q pip
+    elif ! "$PY" -m pip --version >/dev/null 2>&1; then
+      echo "[fail] no uv and the host python has no pip; install one of them" >&2
+      exit 1
+    fi
   else
-    python3 -m venv "$VENV"
+    echo "  creating $VENV"
+    if command -v uv >/dev/null 2>&1; then
+      uv venv "$VENV" --python 3.12
+    else
+      python3 -m venv "$VENV"
+    fi
   fi
 else
   echo "  reusing $VENV"
 fi
-# Plain venvs start without pip inside uv-created ones; make sure it exists.
-if ! "$PY" -m pip --version >/dev/null 2>&1 && command -v uv >/dev/null 2>&1; then
-  uv pip install --python "$PY" -q pip
+# Pick the installer: a venv that shares system site-packages must use pip
+# (uv's resolver ignores system-site-packages and would re-download torch);
+# uv is only the fast path for isolated venvs, and it creates them without
+# pip, so seed pip first.
+if grep -q 'include-system-site-packages = true' "$VENV/pyvenv.cfg" 2>/dev/null; then
+  PIP=("$PY" -m pip install)
+elif command -v uv >/dev/null 2>&1; then
+  PIP=(uv pip install --python "$PY")
+  "$PY" -m pip --version >/dev/null 2>&1 || uv pip install --python "$PY" -q pip
+else
+  PIP=("$PY" -m pip install)
 fi
 
 echo "== torch =="
-# Auto-detect the flavor from the hardware: nvidia-smi present and listing a
-# GPU means CUDA wheels; anything else (CI, CPU-only laptop, WSL without the
-# driver) gets the CPU wheels.
-if [ "$FLAVOR" = auto ]; then
-  if command -v nvidia-smi >/dev/null 2>&1 && [ -n "$(nvidia-smi -L 2>/dev/null)" ]; then
-    FLAVOR=cuda
-    echo "  GPU detected via nvidia-smi -> CUDA wheels"
-  else
-    FLAVOR=cpu
-    echo "  no NVIDIA GPU detected -> CPU wheels"
-  fi
-fi
 # Flavor check: a `+cpu` local build already satisfies `torch>=2.2`, so uv/pip
 # would silently keep CPU wheels when switching to --cuda. Compare the local
-# version tag and force a reinstall when the flavor differs.
+# version tag and force a reinstall when the flavor differs. In a shared venv
+# this check sees the host torch and (matching flavor) skips the download.
 INSTALLED=$("$PY" -c "import torch; print(torch.__version__)" 2>/dev/null || true)
 case "$FLAVOR" in
   cpu)  TORCH_ARGS=(torch torchaudio --index-url https://download.pytorch.org/whl/cpu) ;;
