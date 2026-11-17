@@ -22,8 +22,9 @@ ai-toolkit training run is active, do NOT start anything — stop and tell me.
 Task, in order:
 
 1. `git clone https://github.com/akbargherbal/yue2-karaoke-align && cd yue2-karaoke-align`
-2. `bash scripts/colab_setup.sh` — installs demucs/transformers/soundfile and
-   downloads the baseline aligner once.
+2. `bash scripts/setup.sh --cuda` — builds `.venv`, installs demucs/transformers/soundfile
+   (reusing the session's preinstalled torch) and downloads the baseline aligner once.
+   Run everything with `.venv/bin/python`.
 3. **Stage songs.** I need a folder of `<name>.mp3` + `<name>.txt` pairs, where
    the `.txt` is the caption carrying the lyrics. Two options:
    - the sibling v3 dataset (Suno renders, 438 pairs; zip path is in the

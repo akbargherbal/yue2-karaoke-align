@@ -141,7 +141,7 @@ scripts/gcs_stems.py         two-stem cache: audit / separate on GPU / fetch for
 scripts/lyrics_coverage.py   audio inventory × lyric scrapes → title map + coverage/readiness
 scripts/bench.py             the benchmark harness (models x songs)
 scripts/bench_plots.py       benchmark tables/plots (extras: scripts/requirements-plots.txt)
-scripts/colab_setup.sh       one-shot Colab provisioning for the benchmark
+scripts/setup.sh              one-shot provisioning: .venv + deps (--cuda on GPU/Colab)
 ```
 
 ## Status (2026-10-21)

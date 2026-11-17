@@ -27,7 +27,8 @@ everything on CPU.
 2. Confirm the runtime is CPU (expected, not a problem): `python -c "import torch;
    print(torch.cuda.is_available())"` should print `False`. Do **not** pass any
    `cuda` flags.
-3. Ensure deps (idempotent): `bash scripts/colab_setup.sh` (skips what is present).
+3. Ensure deps (idempotent): `bash scripts/setup.sh --cpu` (reuses what is present).
+   Run the duel with `.venv/bin/python` so it picks up that venv.
 4. Stage **2 songs**. Prefer the real YuE2 renders already used for the sweep
    (`data/yue2_songs`, files named `A_diction_mix_*.mp3` + `.txt`). Run exactly
    two:
