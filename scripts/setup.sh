@@ -14,10 +14,8 @@
 # torch 2.14 / torchaudio 2.11 / transformers 5.19 / demucs 4.1.0 on Python
 # 3.12-3.13). CPU is the default because the CUDA wheels are a multi-GB
 # download; on a GPU box (Colab, T4, ...) pass --cuda so demucs and the
-# aligner actually run there.
-#
-# Note: scripts/colab_setup.sh covers Colab's preinstalled torch instead —
-# use this script for a fresh venv on any machine.
+# aligner actually run there. On Colab this reuses the session's
+# preinstalled CUDA torch instead of downloading it again.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
