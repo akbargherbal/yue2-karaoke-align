@@ -193,6 +193,29 @@ trim is skipped with a note.
    silence. A `VIOLATION` is the MMS-1b failure signature.
 5. **warnings** — long gaps are expected at line boundaries; a runaway last word
    or non-monotone path is not.
+6. **repeat gate** — `repeats.suspected_extra_rendition` is the count of extra
+   renditions the audio appears to contain beyond what the text lists. A forced
+   aligner cannot fail on an untexted repeat; it stretches neighbouring words
+   over the extra audio, so coverage and the gap audit stay healthy. The gate
+   looks for exactly that signature on the vocal stem (stretched, genuinely sung
+   words relative to this track's own pace). `repeats.suspected_lines` names the
+   affected lyric lines. Zero is the healthy result; a positive value means
+   expand the text per render and re-align.
+
+The same gate runs in `scripts/a1_audit.py` and is written to `audit.json` and
+`AUDIT.md` as `suspected_extra_rendition` / `suspected_lines`. You can also run
+it alone while iterating:
+
+```bash
+.venv/bin/python scripts/a1_repeats.py \
+    --words results/a1/<run>/<song>.words.json \
+    --audio work/stems/htdemucs/<song>/vocals.wav \
+    --json /tmp/repeats.json --md /tmp/repeats.md
+```
+
+It exits 2 when a line is suspected, so it works as a CI gate. Without a vocal
+stem it reports zero and says it skipped: word timings alone cannot separate an
+untexted repeat from ordinary melisma.
 
 **Long intro or outro:** when the song opens or closes with a long instrumental
 section, the last word can absorb the trailing silence and run to the end of the

@@ -47,6 +47,7 @@ from a0_compare import energy_tracking  # noqa: E402
 from a0_lyrics import EDGE_PUNCT, lyric_lines  # noqa: E402
 from a0_player import render_html  # noqa: E402
 from a0_qa import qa  # noqa: E402
+from a1_repeats import _frame_db as repeat_frame_db, detect_repeats  # noqa: E402
 from bench import ensure_stem, find_stem, load_lock, read_models, resolve_songs  # noqa: E402
 from duel_verdict import lead_silence_s  # noqa: E402
 
@@ -319,6 +320,24 @@ def align_one(song: dict, proc, model, model_id: str, revision: str | None,
     lead = lead_silence_s(stem)
     first = words[0]["start"] if words else None
 
+    # Forced alignment cannot fail on an untexted repeat: it stretches a word
+    # instead, so QA and the gap audit both stay green.  Run the audio-side
+    # repeat gate now, while the vocal stem is at hand.
+    try:
+        repeat_db, _ = repeat_frame_db(stem)
+        repeats = detect_repeats(
+            words, repeat_db,
+            [{"i": i, "text": text} for i, (text, _) in enumerate(per_line)])
+    except Exception as e:  # noqa: BLE001 - a gate must never fail the alignment
+        repeats = {"suspected_extra_rendition": 0, "suspected_lines": [],
+                   "skipped": f"repeat gate failed: {e}"}
+    if repeats.get("suspected_extra_rendition"):
+        r = repeats["suspected_lines"][0]
+        warns.append(
+            f"repeat gate: {repeats['suspected_extra_rendition']} suspected "
+            f"extra rendition(s) on lyric line {r['line']} "
+            f"({r.get('text', '')[:48]!r}); expand the text per render and re-align")
+
     return {
         "song": song["name"],
         "audio": str(audio),
@@ -337,6 +356,7 @@ def align_one(song: dict, proc, model, model_id: str, revision: str | None,
         "vocab": res["vocab"],
         "qa": m,
         "warnings": warns,
+        "repeats": repeats,
         "energy": energy_tracking(words, str(stem)),
         "lead_silence_s": lead,
         "intro_violation": (lead is not None and first is not None
@@ -383,11 +403,13 @@ def write_reports(out: Path, label: str, records: list[dict],
         if r.get("_ok"):
             for key in ("n_words_in", "n_words_aligned", "duration_s", "align_s",
                         "lead_silence_s", "intro_violation", "line_mapping",
-                        "warnings", "dropped_leading"):
+                        "warnings", "dropped_leading", "repeats"):
                 item[key] = r.get(key)
             item["coverage"] = r["qa"].get("coverage")
             item["monotone"] = r["qa"].get("monotone_starts")
             item["on_off_ratio"] = r["energy"].get("on_off_ratio")
+            item["suspected_extra_rendition"] = (
+                (r.get("repeats") or {}).get("suspected_extra_rendition", 0))
         else:
             item["error"] = r.get("error")
         item["files"] = r.get("_files")
@@ -406,6 +428,9 @@ def write_reports(out: Path, label: str, records: list[dict],
             "words": sum(r["n_words_aligned"] for r in ok),
             "intro_violations": sum(1 for r in ok if r["intro_violation"]),
             "warned_songs": sum(1 for r in ok if r["warnings"]),
+            "repeat_suspects": sum(
+                1 for r in ok
+                if (r.get("repeats") or {}).get("suspected_extra_rendition")),
         },
     }
     (out / "summary.json").write_text(

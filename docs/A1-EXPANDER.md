@@ -3,6 +3,13 @@
 **Status:** draft for review, 2026-10-28. Nothing here is code yet.
 **Scope:** the `needs_expansion` queue only. The 13 accepted tracks are done.
 
+> **Update (2026-11-18):** the no-gap failure mode is now measured by
+> `scripts/a1_repeats.py` (wired into `a1_align_run.py` and `a1_audit.py`).
+> That gate reports `suspected_extra_rendition` on the vocal stem, so a track can
+> be queued for expansion even when `lyrics_coverage.py` sees no loud gap. The
+> many-to-one alignment mode described below is still the real fix and remains
+> unimplemented.
+
 ## 1. What the queue actually is
 
 `index/lyrics/readiness.csv` has **161** rows marked `needs_expansion` (the
