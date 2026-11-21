@@ -25,6 +25,11 @@ demucs>=4.1
 soundfile>=0.12
 
 # --- optional tooling -------------------------------------------------------
+# Score + karaoke viewer (scripts/score_viewer.py, scripts/view_run.py) is
+# stdlib-only; it shells out to ffmpeg/ffprobe for duration + waveform, and
+# optionally to MuseScore (--musicxml score pages) and gcloud (gs:// audio).
+# Pillow, when installed, downscales score pages.
+#
 # Phase 0 tokenizer check against the model's own .tiktoken file.
 tiktoken>=0.7
 

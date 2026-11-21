@@ -96,6 +96,31 @@ Word-level timing is in the JSON and the player; `.srt`/`.vtt` are line-level
 (what a normal subtitle player can display). The player links its audio by
 relative path, so it travels with the source file.
 
+### Score + karaoke player (optional)
+
+The A1 player is lyrics-only. If you also have a score (MusicXML) and/or
+SheetSage2 `.lab` timing, the optional viewer puts the **score page, bar grid,
+chords, sections, piano roll and the word-level lyric highlight on one
+timeline**. It is a thin, read-only bridge to the captioning/`score-lab`
+artifacts — no MuseScore is needed with `--no-pages`.
+
+```bash
+# one take, with score pages (MuseScore renders the MusicXML)
+python scripts/score_viewer.py --audio take.mp3 --words take.words.json \
+    --musicxml take.musicxml --out out/take/viewer.html
+
+# a whole A1 run, karaoke/timeline only
+python scripts/view_run.py --run results/a1/yue2-real --out /tmp/view --no-pages
+
+# a score-lab transcript tree, audio from GCS
+python scripts/view_run.py --run <run-dir> --transcripts transcripts \
+    --audio-dir gs://<bucket>/.../<run> --out <run-dir>/score --no-pages
+```
+
+`view_run.py` consumes existing `<song>.words.json`; run A1 first. See
+[docs/SCORE-PLAYER.md](docs/SCORE-PLAYER.md) for the input shapes, page-sync
+caveat and attribution.
+
 ## Why this might work at all
 
 YuE2's AR stream is conditioned on the diacritized lyric tokens and emits a
@@ -138,6 +163,10 @@ scripts/a0_player.py         self-contained karaoke HTML from word timings
 scripts/a1_align_run.py      batch a run dir → words.json + VTT/SRT + player
 scripts/a1_repeats.py        audio repeat gate: untexted renditions → suspicion list
 scripts/a1_tagged_player.py  re-render a player with caption section tags kept
+scripts/score_viewer.py      score + karaoke viewer for one take (score-lab port)
+scripts/view_run.py          batch viewer over a run: audio fetch, archives, index
+scripts/score_player-template.html  the self-contained viewer page
+docs/SCORE-PLAYER.md         score + karaoke player: inputs, commands, limits
 scripts/gcs_inventory.py     GCS discography → inventory.csv (236 Elissa/Fadl tracks)
 scripts/gcs_stems.py         two-stem cache: audit / separate on GPU / fetch for A1
 scripts/lyrics_coverage.py   audio inventory × lyric scrapes → title map + coverage/readiness

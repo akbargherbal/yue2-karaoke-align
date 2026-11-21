@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__TITLE__</title>
+<style>
+  :root { --bg:#14171c; --panel:#1c2129; --ink:#e8eaef; --dim:#8b93a1;
+          --accent:#4ea1ff; --vocal:#ff6b8a; --ins:#59c9a5; --bar:#39424f;
+          --word:#ffd34d; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink);
+         font:14px/1.45 system-ui, "Segoe UI", sans-serif; }
+  header { display:flex; gap:16px; align-items:baseline; flex-wrap:wrap;
+           padding:12px 18px; border-bottom:1px solid #262c35;
+           background:var(--panel); position:sticky; top:0; z-index:3; }
+  header h1 { font-size:16px; margin:0; font-weight:600; }
+  header .meta { color:var(--dim); font-size:12.5px; }
+  .readout { display:flex; gap:22px; align-items:baseline; flex-wrap:wrap;
+             padding:10px 18px; font-variant-numeric:tabular-nums; }
+  .readout > div { min-width:56px; }
+  .readout b { display:block; font-size:20px; font-weight:600; line-height:1.15; }
+  .readout span { color:var(--dim); font-size:11px; text-transform:uppercase;
+                  letter-spacing:.04em; }
+  .readout .chord { font-size:18px; font-weight:700; color:var(--accent); }
+  .readout .section { font-size:14px; color:var(--ins); }
+  .readout .word { font-size:16px; color:var(--word); max-width:34vw;
+                   overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .controls { display:flex; gap:10px; align-items:center; padding:0 18px 10px;
+              flex-wrap:wrap; }
+  button { background:#26303c; color:var(--ink); border:1px solid #37424f;
+           border-radius:6px; padding:6px 12px; cursor:pointer; font-size:13px; }
+  button:hover { background:#2f3b4a; }
+  button.on { background:var(--accent); color:#08111c; border-color:var(--accent); }
+  input[type=range] { flex:1; min-width:180px; accent-color:var(--accent); }
+  .grid { display:grid; grid-template-columns: minmax(0,1.9fr) minmax(320px,1fr);
+          gap:14px; padding:0 18px 18px; align-items:start; }
+  .grid.nopages { grid-template-columns: minmax(0,1fr); }
+  .scorecard[hidden] { display:none; }
+  .stack { display:flex; flex-direction:column; gap:8px; min-width:0; }
+  canvas { display:block; width:100%; background:var(--panel);
+           border:1px solid #262c35; border-radius:6px; }
+  .scorecard { background:var(--panel); border:1px solid #262c35;
+               border-radius:6px; padding:8px; position:sticky; top:74px; }
+  .scorecard img { width:100%; display:block; border-radius:3px; background:#fff; }
+  .scorecard .cap { color:var(--dim); font-size:12px; padding-top:6px;
+                    display:flex; justify-content:space-between; gap:8px; }
+  .karaoke { background:var(--panel); border:1px solid #262c35; border-radius:6px;
+             padding:10px 14px; min-height:132px; }
+  .kline { text-align:center; }
+  .kline.prev, .kline.next { color:#657084; font-size:15px; min-height:1.6em;
+                             overflow:hidden; white-space:nowrap;
+                             text-overflow:ellipsis; }
+  .kline.cur { color:var(--ink); font-size:27px; line-height:1.7; min-height:2.2em;
+               padding:4px 0; }
+  .kline.cur .w { padding:.04em .1em; border-radius:5px;
+                  transition:background .08s, color .08s; }
+  .kline.cur .w.on { background:var(--word); color:#15171d; font-weight:600; }
+  .kline.cur .w.done { color:#9aa3b4; }
+  .kline.cur .sep { display:inline-block; width:.32em; }
+  .legend { color:var(--dim); font-size:12px; padding:0 2px 2px; }
+  .legend i { display:inline-block; width:9px; height:9px; border-radius:2px;
+              margin-right:5px; }
+  .legend[hidden] { display:none; }
+  .hint { color:var(--dim); font-size:12px; padding:0 18px 16px; }
+  kbd { background:#26303c; border:1px solid #37424f; border-radius:4px;
+        padding:1px 5px; font-size:11.5px; }
+  @media (max-width: 860px) {
+    .grid { grid-template-columns: minmax(0,1fr); }
+    .scorecard { position:static; }
+    .readout .word { max-width:100%; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>__TITLE__</h1>
+  <div class="meta" id="meta" dir="ltr"></div>
+</header>
+
+<div class="readout">
+  <div><b id="clock" dir="ltr">00:00.0</b><span>time</span></div>
+  <div><b id="bar" dir="ltr">—</b><span>bar</span></div>
+  <div><b class="chord" id="chord" dir="ltr">—</b><span>chord</span></div>
+  <div><b class="section" id="section">—</b><span>section</span></div>
+  <div><b id="beat" dir="ltr">—</b><span>beat</span></div>
+  <div><b class="word" id="word" dir="auto">—</b><span>word</span></div>
+</div>
+
+<div class="controls">
+  <button id="play">▶ Play</button>
+  <input type="range" id="seek" min="0" max="1000" value="0" step="1">
+  <button id="zoom">Zoom: 8 bars</button>
+  <button id="follow" class="on">Follow lyrics</button>
+</div>
+
+<div class="grid" id="grid">
+  <div class="scorecard" id="scorecard">
+    <img id="page" alt="score page">
+    <div class="cap"><span id="pagecap">—</span><span>score sync is approximate</span></div>
+  </div>
+
+  <div class="stack">
+    <div class="karaoke" id="karaoke">
+      <div class="kline prev" id="prevline" dir="auto"></div>
+      <div class="kline cur" id="curline" dir="auto"></div>
+      <div class="kline next" id="nextline" dir="auto"></div>
+    </div>
+    <div class="legend">
+      <i style="background:var(--vocal)"></i>word (line A)
+      <i style="background:var(--accent); margin-left:12px"></i>word (line B)
+      <i style="background:var(--word); margin-left:12px"></i>current word
+      <i style="background:var(--accent); margin-left:12px"></i>playhead
+    </div>
+    <canvas id="wave" height="130"></canvas>
+    <div class="legend" id="chordlegend">chords</div>
+    <canvas id="chords" height="34"></canvas>
+    <div class="legend" id="sectlegend">sections</div>
+    <canvas id="sections" height="28"></canvas>
+    <div class="legend" id="rolllegend">notes (piano roll) — higher = higher pitch</div>
+    <canvas id="roll" height="180"></canvas>
+  </div>
+</div>
+
+<div class="hint">
+  <kbd>Space</kbd> play/pause · click the waveform or piano roll to seek ·
+  <kbd>←</kbd>/<kbd>→</kbd> ±2 s · <code>viewer.html#t=75</code> opens at 1:15
+</div>
+
+<audio id="audio" src="__AUDIO__" preload="auto"></audio>
+
+<script>
+const DATA = __DATA__;
+
+const W = DATA.words || [];
+const LINES = DATA.lines || [];
+const HAS_BARS = (DATA.bars || []).length > 0;
+const HAS_CHORDS = (DATA.chords || []).length > 0;
+const HAS_SECTIONS = (DATA.sections || []).length > 0;
+const HAS_NOTES = (DATA.notes || []).length > 0;
+const HAS_PAGES = (DATA.pages || []).length > 0;
+
+const audio = document.getElementById('audio');
+const wave = document.getElementById('wave');
+const chordC = document.getElementById('chords');
+const sectC = document.getElementById('sections');
+const rollC = document.getElementById('roll');
+const pageImg = document.getElementById('page');
+const seek = document.getElementById('seek');
+const playBtn = document.getElementById('play');
+const zoomBtn = document.getElementById('zoom');
+const followBtn = document.getElementById('follow');
+const curLine = document.getElementById('curline');
+const prevLine = document.getElementById('prevline');
+const nextLine = document.getElementById('nextline');
+
+const DUR = DATA.duration || 1;
+const ZOOM = DATA.zoomSpan || Math.min(DUR, 30);
+let view = { t0: 0, t1: DUR, zoomed: false };
+let followOn = true;
+
+// Deep links and headless previews: before the media is seekable the clock
+// comes from here, so the first paint already shows the requested moment.
+let pendingSeek = null;
+const now = () => pendingSeek !== null ? pendingSeek : audio.currentTime;
+
+const fmt = t => {
+  const m = Math.floor(t / 60), s = t - m * 60;
+  return String(m).padStart(2, '0') + ':' + s.toFixed(1).padStart(4, '0');
+};
+
+function fit(canvas) {
+  const dpr = window.devicePixelRatio || 1;
+  const r = canvas.getBoundingClientRect();
+  if (!r.width || !r.height) return null;
+  const cssH = r.height;
+  canvas.width = Math.max(1, Math.round(r.width * dpr));
+  canvas.height = Math.max(1, Math.round(cssH * dpr));
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { ctx, w: r.width, h: cssH };
+}
+
+function lastAt(arr, t, key) {
+  let lo = 0, hi = arr.length - 1, ans = -1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (arr[mid][key] <= t) { ans = mid; lo = mid + 1; } else { hi = mid - 1; }
+  }
+  return ans;
+}
+
+function barIndexAt(t) {
+  if (!HAS_BARS) return -1;
+  let lo = 0, hi = DATA.bars.length - 1, ans = 0;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (DATA.bars[mid] <= t) { ans = mid; lo = mid + 1; } else { hi = mid - 1; }
+  }
+  return ans;
+}
+
+function wordIndexAt(t) {
+  const i = lastAt(W, t, 1);
+  if (i >= 0 && t <= W[i][2] + 0.2) return i;
+  return -1;
+}
+
+function linePosAt(t) {
+  return lastAt(LINES, t, 's');
+}
+
+function chordAt(t) {
+  for (let i = DATA.chords.length - 1; i >= 0; i--) {
+    const c = DATA.chords[i];
+    if (t >= c[0] && t < c[1]) return c[2];
+  }
+  return '—';
+}
+
+function sectionAt(t) {
+  for (let i = DATA.sections.length - 1; i >= 0; i--) {
+    const s = DATA.sections[i];
+    if (t >= s[0] && t < s[1]) return s[2];
+  }
+  return '—';
+}
+
+function beatAt(t) {
+  const b = DATA.beats;
+  if (!b.length) return '—';
+  let lo = 0, hi = b.length - 1, ans = -1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (b[mid][0] <= t) { ans = mid; lo = mid + 1; } else { hi = mid - 1; }
+  }
+  if (ans < 0) return '—';
+  const meter = DATA.meter || [4, 4];
+  return ((b[ans][1] - 1) % meter[0] + 1) + '/' + meter[0];
+}
+
+// --- karaoke lane ---------------------------------------------------------
+const lineWords = {};
+W.forEach((w, i) => { (lineWords[w[3]] ||= []).push(i); });
+
+let curLinePos = -2, curWord = -1;
+
+function renderLine(pos) {
+  if (pos === curLinePos) return;
+  curLinePos = pos;
+  curWord = -1;
+  prevLine.textContent = pos > 0 ? LINES[pos - 1].t : '';
+  nextLine.textContent = (pos >= 0 && pos + 1 < LINES.length) ? LINES[pos + 1].t : '';
+  curLine.innerHTML = '';
+  if (pos < 0) return;
+  const ids = lineWords[LINES[pos].i] || [];
+  ids.forEach(i => {
+    const span = document.createElement('span');
+    span.className = 'w';
+    span.textContent = W[i][0];
+    span.dataset.i = i;
+    curLine.appendChild(span);
+    const sep = document.createElement('span');
+    sep.className = 'sep';
+    sep.textContent = ' ';
+    curLine.appendChild(sep);
+  });
+}
+
+function highlight(idx) {
+  if (idx === curWord) return;
+  if (curWord >= 0) {
+    const old = curLine.querySelector('.w[data-i="' + curWord + '"]');
+    if (old) { old.classList.remove('on'); old.classList.add('done'); }
+  }
+  curWord = idx;
+  if (idx >= 0) {
+    const el = curLine.querySelector('.w[data-i="' + idx + '"]');
+    if (el) {
+      el.classList.add('on');
+      if (followOn) el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
+  }
+}
+
+// --- drawing --------------------------------------------------------------
+function drawWave(t) {
+  const f = fit(wave);
+  if (!f) return;
+  const { ctx, w, h } = f;
+  ctx.clearRect(0, 0, w, h);
+  const mid = h / 2;
+  const span = view.t1 - view.t0 || 1;
+
+  // section shading
+  for (const s of DATA.sections) {
+    const x0 = (s[0] - view.t0) / span * w, x1 = (s[1] - view.t0) / span * w;
+    if (x1 < 0 || x0 > w) continue;
+    ctx.fillStyle = 'rgba(89,201,165,0.07)';
+    ctx.fillRect(x0, 0, Math.max(1, x1 - x0), h);
+  }
+
+  // waveform
+  const peaks = DATA.peaks || [];
+  const n = peaks.length;
+  if (n) {
+    ctx.fillStyle = '#5b6b80';
+    for (let x = 0; x < w; x++) {
+      const i0 = Math.floor((x / w) * n);
+      const i1 = Math.max(i0 + 1, Math.floor(((x + 1) / w) * n));
+      let lo = 1, hi = -1;
+      for (let i = i0; i < i1 && i < n; i++) {
+        lo = Math.min(lo, peaks[i][0]);
+        hi = Math.max(hi, peaks[i][1]);
+      }
+      if (hi < lo) continue;
+      const y0 = mid - hi * mid, y1 = mid - lo * mid;
+      ctx.fillRect(x, y0, 1, Math.max(1, y1 - y0));
+    }
+  }
+
+  // bar ticks
+  ctx.fillStyle = '#39424f';
+  ctx.font = '10px system-ui';
+  ctx.textAlign = 'left';
+  DATA.bars.forEach((bt, i) => {
+    const x = (bt - view.t0) / span * w;
+    if (x < -1 || x > w + 1) return;
+    ctx.fillRect(x, 0, 1, h);
+    if (view.zoomed || i % Math.ceil(DATA.bars.length / 24) === 0) {
+      ctx.fillText(String(i + 1), x + 2, 11);
+    }
+  });
+
+  // word blocks: the lyric timeline under the waveform
+  const y0 = h - 9, bh = 6;
+  W.forEach((word, i) => {
+    const x0 = (word[1] - view.t0) / span * w;
+    const x1 = (word[2] - view.t0) / span * w;
+    if (x1 < 0 || x0 > w) return;
+    ctx.fillStyle = i === curWord ? '#ffd34d'
+      : (word[3] % 2 ? 'rgba(255,107,138,0.55)' : 'rgba(78,161,255,0.45)');
+    ctx.fillRect(x0, y0, Math.max(1, x1 - x0 - 0.5), bh);
+  });
+
+  // playhead
+  const px = (t - view.t0) / span * w;
+  ctx.fillStyle = '#4ea1ff';
+  ctx.fillRect(px - 1, 0, 2, h);
+}
+
+function drawChords(t) {
+  if (!HAS_CHORDS) return;
+  const f = fit(chordC);
+  if (!f) return;
+  const { ctx, w, h } = f;
+  ctx.clearRect(0, 0, w, h);
+  const span = view.t1 - view.t0 || 1;
+  ctx.font = '12px system-ui';
+  ctx.textAlign = 'left';
+  for (const c of DATA.chords) {
+    const x0 = (c[0] - view.t0) / span * w, x1 = (c[1] - view.t0) / span * w;
+    if (x1 < 0 || x0 > w) continue;
+    const active = t >= c[0] && t < c[1];
+    ctx.fillStyle = active ? 'rgba(78,161,255,0.30)' : 'rgba(255,255,255,0.05)';
+    ctx.fillRect(x0, 2, Math.max(1, x1 - x0 - 1), h - 4);
+    if (x1 - x0 > 18) {
+      ctx.fillStyle = active ? '#eaf3ff' : '#a9b6c6';
+      ctx.fillText(c[2], x0 + 3, h - 10);
+    }
+  }
+}
+
+function drawSections(t) {
+  if (!HAS_SECTIONS) return;
+  const f = fit(sectC);
+  if (!f) return;
+  const { ctx, w, h } = f;
+  ctx.clearRect(0, 0, w, h);
+  const span = view.t1 - view.t0 || 1;
+  ctx.font = '11px system-ui';
+  ctx.textAlign = 'left';
+  DATA.sections.forEach((s, i) => {
+    const x0 = (s[0] - view.t0) / span * w, x1 = (s[1] - view.t0) / span * w;
+    if (x1 < 0 || x0 > w) return;
+    const active = t >= s[0] && t < s[1];
+    ctx.fillStyle = active ? 'rgba(89,201,165,0.35)'
+      : (i % 2 ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.08)');
+    ctx.fillRect(x0, 0, Math.max(1, x1 - x0 - 1), h);
+    if (x1 - x0 > 40) {
+      ctx.fillStyle = active ? '#d7fff1' : '#93a3ae';
+      ctx.fillText(s[2], x0 + 4, h - 9);
+    }
+  });
+}
+
+function drawRoll(t) {
+  if (!HAS_NOTES) return;
+  const f = fit(rollC);
+  if (!f) return;
+  const { ctx, w, h } = f;
+  ctx.clearRect(0, 0, w, h);
+  const span = view.t1 - view.t0 || 1;
+  ctx.fillStyle = 'rgba(255,255,255,0.05)';
+  DATA.bars.forEach(bt => {
+    const x = (bt - view.t0) / span * w;
+    if (x >= 0 && x <= w) ctx.fillRect(x, 0, 1, h);
+  });
+  let pmin = Infinity, pmax = -Infinity;
+  for (const n of DATA.notes) { pmin = Math.min(pmin, n[2]); pmax = Math.max(pmax, n[2]); }
+  pmin -= 2; pmax += 2;
+  const yOf = p => h - ((p - pmin) / (pmax - pmin || 1)) * h;
+  for (const n of DATA.notes) {
+    const x0 = (n[0] - view.t0) / span * w, x1 = (n[1] - view.t0) / span * w;
+    if (x1 < 0 || x0 > w) continue;
+    ctx.fillStyle = n[3] === 0 ? 'rgba(255,107,138,0.85)' : 'rgba(89,201,165,0.85)';
+    ctx.fillRect(x0, yOf(n[2]) - 2, Math.max(1.5, x1 - x0), 4);
+  }
+  const px = (t - view.t0) / span * w;
+  ctx.fillStyle = '#4ea1ff';
+  ctx.fillRect(px - 1, 0, 2, h);
+}
+
+function updatePages(t, bar) {
+  if (!HAS_PAGES) return;
+  let idx;
+  if (HAS_BARS) {
+    idx = Math.floor((bar - 1) / (DATA.barsPerPage || 1));
+  } else {
+    idx = Math.floor((t / DUR) * DATA.pages.length);
+  }
+  idx = Math.max(0, Math.min(DATA.pages.length - 1, idx));
+  if (pageImg.dataset.idx !== String(idx)) {
+    pageImg.dataset.idx = String(idx);
+    pageImg.src = DATA.pages[idx];
+    document.getElementById('pagecap').textContent =
+      'page ' + (idx + 1) + ' / ' + DATA.pages.length;
+  }
+}
+
+let raf = null;
+function frame() {
+  const t = now();
+  if (view.zoomed) {
+    const half = ZOOM * 0.35;
+    view.t0 = Math.max(0, Math.min(DUR - ZOOM, t - half));
+    view.t1 = Math.min(DUR, view.t0 + ZOOM);
+  } else {
+    view.t0 = 0;
+    view.t1 = DUR;
+  }
+
+  const wi = wordIndexAt(t);
+  const lp = linePosAt(t);
+  renderLine(lp);
+  highlight(wi);
+
+  const bar = HAS_BARS ? barIndexAt(t) + 1 : 1;
+  drawWave(t); drawChords(t); drawSections(t); drawRoll(t);
+  updatePages(t, bar);
+
+  document.getElementById('clock').textContent = fmt(t);
+  document.getElementById('bar').textContent =
+    HAS_BARS ? bar + ' / ' + DATA.bars.length : '—';
+  document.getElementById('chord').textContent = HAS_CHORDS ? chordAt(t) : '—';
+  document.getElementById('section').textContent =
+    HAS_SECTIONS ? sectionAt(t) : '—';
+  document.getElementById('beat').textContent = beatAt(t);
+  document.getElementById('word').textContent = wi >= 0
+    ? W[wi][0] + '  ' + W[wi][1].toFixed(2) + '–' + W[wi][2].toFixed(2) + 's'
+    : '—';
+  seek.value = String(Math.round(t / DUR * 1000));
+  if (!audio.paused) raf = requestAnimationFrame(frame);
+}
+
+function redraw() { frame(); }
+
+audio.addEventListener('play', () => {
+  playBtn.textContent = '❚❚ Pause';
+  if (!raf) raf = requestAnimationFrame(frame);
+});
+audio.addEventListener('pause', () => {
+  playBtn.textContent = '▶ Play';
+  if (raf) { cancelAnimationFrame(raf); raf = null; }
+});
+audio.addEventListener('seeked', redraw);
+
+playBtn.onclick = () => audio.paused ? audio.play() : audio.pause();
+zoomBtn.onclick = () => {
+  if (!HAS_BARS) return;
+  view.zoomed = !view.zoomed;
+  zoomBtn.classList.toggle('on', view.zoomed);
+  zoomBtn.textContent = view.zoomed ? 'Zoom: all' : 'Zoom: 8 bars';
+  redraw();
+};
+followBtn.onclick = () => {
+  followOn = !followOn;
+  followBtn.classList.toggle('on', followOn);
+  followBtn.textContent = followOn ? 'Follow lyrics' : 'Free scroll';
+};
+
+function seekTo(clientX, el) {
+  pendingSeek = null;
+  const r = el.getBoundingClientRect();
+  const frac = (clientX - r.left) / r.width;
+  audio.currentTime = Math.max(0, Math.min(DUR,
+    view.t0 + frac * (view.t1 - view.t0)));
+  redraw();
+}
+[wave, rollC, chordC].forEach(el => el.addEventListener('click', e => seekTo(e.clientX, el)));
+seek.oninput = () => {
+  pendingSeek = null;
+  audio.currentTime = DUR * (seek.value / 1000);
+  redraw();
+};
+
+window.addEventListener('keydown', e => {
+  if (e.code === 'Space') { e.preventDefault(); playBtn.click(); }
+  if (e.code === 'ArrowRight') {
+    audio.currentTime = Math.min(DUR, audio.currentTime + 2); redraw();
+  }
+  if (e.code === 'ArrowLeft') {
+    audio.currentTime = Math.max(0, audio.currentTime - 2); redraw();
+  }
+});
+
+// Hide lanes that have no data so the page does not show empty canvases.
+function hide(id) {
+  const el = document.getElementById(id);
+  if (el) el.hidden = true;
+}
+if (!HAS_CHORDS) { hide('chords'); hide('chordlegend'); }
+if (!HAS_SECTIONS) { hide('sections'); hide('sectlegend'); }
+if (!HAS_NOTES) { hide('roll'); hide('rolllegend'); }
+if (!HAS_PAGES) {
+  document.getElementById('scorecard').hidden = true;
+  document.getElementById('grid').classList.add('nopages');
+}
+if (!W.length) hide('karaoke');
+if (!HAS_BARS) hide('zoom');
+
+const metaBits = [];
+if (DATA.key) metaBits.push(DATA.key);
+if (DATA.meter) metaBits.push(DATA.meter.join('/'));
+if (DATA.bpm) metaBits.push('♩=' + DATA.bpm);
+metaBits.push(fmt(DUR));
+if (HAS_BARS) metaBits.push(DATA.bars.length + ' bars');
+if (W.length) metaBits.push(W.length + ' words');
+if (HAS_PAGES) metaBits.push(DATA.pages.length + ' score pages');
+document.getElementById('meta').textContent = metaBits.join(' · ');
+
+window.addEventListener('resize', redraw);
+
+// Deep link: viewer.html#t=75 opens at 1:15. A seek issued before the media is
+// seekable is queued by the browser and can report 0 for a moment, so the
+// target lives in pendingSeek and the view keeps rendering from it until a
+// real 'seeked' event confirms it.
+function trySeek() {
+  if (pendingSeek === null) return;
+  try { audio.currentTime = pendingSeek; } catch (e) { return; }
+  redraw();
+}
+audio.addEventListener('seeked', () => {
+  if (pendingSeek !== null && Math.abs(audio.currentTime - pendingSeek) <= 0.5) {
+    pendingSeek = null;
+    redraw();
+  }
+});
+['loadedmetadata', 'canplay', 'loadstart'].forEach(ev =>
+  audio.addEventListener(ev, trySeek));
+audio.addEventListener('playing', () => { pendingSeek = null; });
+function deepLink() {
+  const m = /^#t=(\d+(?:\.\d+)?)$/.exec(location.hash);
+  if (!m) return;
+  pendingSeek = Math.min(DUR, parseFloat(m[1]));
+  trySeek();
+}
+deepLink();
+redraw();
+</script>
+</body>
+</html>
